@@ -89,8 +89,10 @@ target(projectName)
         "ScopedTimer", "Profiler", { public = true }
     )
 
+    -- Cross-platform packages
     add_packages("fmt", { public = true })
     add_packages("glaze", { public = true })
+    add_packages("zydis", "zycore", { public = true })
 
     if is_plat("windows") then
         -- Windows-only dependencies
