@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef UE4SS_HEADLESS
+// GUI not available in headless builds
+#else
+
 #include <mutex>
 #include <string>
 #include <vector>
@@ -47,3 +51,5 @@ namespace RC::GUI
         auto add_line(const StringType&, Color::Color) -> void;
     };
 } // namespace RC::GUI
+
+#endif // UE4SS_HEADLESS

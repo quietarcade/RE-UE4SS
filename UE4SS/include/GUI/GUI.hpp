@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef UE4SS_HEADLESS
+// GUI not available in headless builds
+#else
+
 #include <functional>
 #include <memory>
 #include <thread>
@@ -304,3 +308,5 @@ namespace RC::GUI
         });
     }
 } // namespace RC::GUI
+
+#endif // UE4SS_HEADLESS
