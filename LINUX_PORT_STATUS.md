@@ -12,90 +12,160 @@ Build `libUE4SS.so` that can be loaded via `LD_PRELOAD` into a native Linux Palw
 ### Build System
 - xmake allows `linux` platform with `x86_64` arch
 - Linux platform type with correct defines (`PLATFORM_LINUX`, `PLATFORM_UNIX`, `UE4SS_HEADLESS`)
+- Global defines at root xmake.lua level (ensures all targets see them)
 - UVTD, cppmods, glad, patternsleuth excluded on Linux
 - Rust/MSVC version checks skipped on Linux
 - `LinuxCompat.hpp` force-included (printf_s, __declspec, strncpy_s, API macros)
-- GCC flags: `-fpermissive`, `-fms-extensions`, `-Wno-error`, `-Wno-changes-meaning`
+- GCC flags: `-fpermissive`, `-fms-extensions`, `-Wno-error`, `-Wno-changes-meaning`, `-Wno-template-id-cdtor`
 
 ### Platform Headers (UEPseudo)
-- `Linux/LinuxPlatform.hpp` - FPlatformTypes (wchar_t TCHAR, 4-byte), PLATFORM_DESKTOP, PLATFORM_64BITS, etc
+- `Linux/LinuxPlatform.hpp` - FPlatformTypes (wchar_t TCHAR, 4-byte), PLATFORM_DESKTOP, PLATFORM_64BITS, etc.
 - `Linux/LinuxPlatformCompilerPreSetup.hpp` - __has_warning shim, pragma macros
 - `Linux/LinuxPlatformCompilerSetup.hpp` - FORCEINLINE, DLLEXPORT, RESTRICT
-- `Linux/LinuxPlatformAtomics.hpp` - FLinuxPlatformAtomics with __sync builtins (all overloads)
-- `Linux/LinuxPlatformMemory.hpp` - FLinuxPlatformMemory (memmove/memcpy/memswap etc)
-- `Linux/LinuxPlatformMath.hpp` - typedef to FGenericPlatformMath
-- `Linux/LinuxPlatformMisc.hpp` - FLinuxPlatformMisc with MemoryBarrier
-- `Linux/LinuxPlatformString.hpp` - typedef to FGenericPlatformString
-- `Linux/LinuxPlatformProperties.hpp` - typedef to FGenericPlatformProperties
+- `Linux/LinuxPlatformAtomics.hpp` - FLinuxPlatformAtomics with __sync builtins (int32, int64, long long overloads, AtomicRead, And/Or/Xor)
+- `Linux/LinuxPlatformMemory.hpp` - FLinuxPlatformMemory (memmove/memcpy/memswap/BigBlock/Streaming/Parallel)
+- `Linux/LinuxPlatformMath.hpp` - typedef to FGenericPlatformMath (in RC::Unreal namespace)
+- `Linux/LinuxPlatformMisc.hpp` - FLinuxPlatformMisc with MemoryBarrier (in RC::Unreal namespace)
+- `Linux/LinuxPlatformString.hpp` - typedef to FGenericPlatformString (in RC::Unreal namespace)
+- `Linux/LinuxPlatformProperties.hpp` - typedef (in RC::Unreal namespace)
 - `Linux/LinuxPlatformFile.h` - empty stub
 - `Windows/MinimalWindowsApi.hpp` - no-op on non-Windows instead of #error
 - Template ordering fix in ContainerAllocationPolicies.hpp
 - __FUNCDNAME__ -> __PRETTY_FUNCTION__ in VirtualFunctionHelper.hpp
 - DECLARE_VIRTUAL_TYPE_BASE inlined to avoid TypeAccessor redeclaration
-- ScanOverrides/FNameToStringMethod pragma suppress
+- ScanOverrides/FNameToStringMethod pragma suppress in UnrealInitializer.hpp
 
 ### UE4SS Source Guards
 - `main_ue4ss_linux.cpp` - LD_PRELOAD entry point
 - `CrashDumperLinux.cpp` - signal-based crash handler
 - `CppModLinux.cpp` - dlopen/dlsym mod loader
 - `SinglePassSigScannerLinux.cpp` - /proc/self/maps memory scanner
-- `LinuxDetour.hpp` - mprotect-based inline x64 function hooking
+- `LinuxDetour.hpp` - mprotect-based inline x64 function hooking (namespace alias PLH = LinuxHook)
 - Platform guards on: UE4SSProgram.cpp, CrashDumper.cpp, CppMod.cpp, main_ue4ss_rewritten.cpp, SinglePassSigScanner.cpp, Win32AsyncInputSource.cpp, PlatformInit.cpp, UEHeaderGenerator.cpp, LuaLibrary.cpp
-- GUI headers guarded with `#ifndef UE4SS_HEADLESS`
-- `#if PLATFORM_WINDOWS` used everywhere (not `#ifdef`, since it's defined as 0)
+- GUI/GUI.hpp and GUI/Console.hpp guarded with `#ifndef UE4SS_HEADLESS`
+- `#if PLATFORM_WINDOWS` used everywhere (not `#ifdef`, since HAL/Platform.hpp defines it as 0)
 - CppMod.hpp: Windows HMODULE guarded, uses void* on Linux
 
-### String Type Decision
-Currently: `CharType = char` for headless builds (in StringType.hpp). UE's TCHAR is `wchar_t` (4 bytes on Linux).
+### String Type (RESOLVED)
+- `CharType = wchar_t` on Linux (matches UE's TCHAR, avoids overload conflicts)
+- `fmt` chrono issue fixed by formatting with narrow chars then widening
+- `STR()` macro produces `L""` literals on Linux
+- No more `StringViewType == std::string_view` collision
 
-## Remaining Issues (Next Session)
+---
 
-### Critical: String Type Conflict
-**Problem**: With `CharType = char`, `StringViewType = std::string_view`. But `UE4SSProgram.hpp` has two overloads of `find_mod_by_name` - one taking `std::string_view` and one taking `StringViewType`. When they're the same type, GCC rejects the duplicate.
+## Remaining Issues - Detailed Audit
 
-**Options**:
-1. Use `wchar_t` as CharType on Linux (matches TCHAR, avoids conflicts) and fix `fmt` chrono formatting with wchar_t
-2. Use `char16_t` as CharType (like the FORCE_U16 path) - needs fmt support for char16_t
-3. Keep `char` but add `#if` guards around the conflicting overloads
-4. Best option: Use `wchar_t` for CharType on Linux. For the `fmt` chrono issue, narrow-convert the time string (format with `char` fmt, then widen to wchar_t)
+### CRITICAL: SettingsManager.hpp (cascading - included by everything)
 
-### GUI References in SettingsManager.hpp
-Line 83-84 reference `GUI::RenderMode` type. Needs `#ifndef UE4SS_HEADLESS` guard.
+**Problem**: Lines 83-84 use `GUI::GfxBackend` and `GUI::RenderMode` enums which don't exist in headless builds (GUI/GUI.hpp is fully `#ifdef`'d out).
 
-### Template Specialization in Class Body (UE4SSProgram.hpp line 339)
-`find_mod_by_name<LuaMod>` explicit specialization inside class - GCC rejects. Move outside the class.
+**Fix**: Provide stub enum definitions that exist in headless builds:
+```cpp
+#ifdef UE4SS_HEADLESS
+namespace RC::GUI {
+    enum class GfxBackend { DX11, GLFW3_OpenGL3 };
+    enum class RenderMode { ExternalThread, EngineTick, GameViewportClientTick };
+}
+#endif
+```
+Add this to `GUI/GUI.hpp` BEFORE the `#ifndef UE4SS_HEADLESS` guard, or to a separate `GUI/GUIStubs.hpp`.
 
-### Files Not Yet Compiled (will reveal more errors)
-The build currently fails at `UE4SSProgram.cpp` compilation. Once that passes, we'll hit errors in:
-- `LuaMod.cpp` (the Lua mod loader - critical for our goal)
-- `Mod.cpp`
-- `FilesystemWatcher.cpp`
-- `LuaType/*.cpp` files
-- Deps: `Unreal/src/UnrealInitializer.cpp`, `Unreal/src/UObject.cpp` (have `#include <Windows.h>` that need `#if _WIN32` guards)
+### CRITICAL: UE4SSProgram.cpp - unguarded GUI usage (many locations)
 
-### Linking Phase
-After all .cpp files compile, the linker will need:
-- All dependency libraries linked (LuaMadeSimple, LuaRaw, File, DynamicOutput, etc)
-- The deps' own .cpp files to compile on Linux (some have Windows.h includes)
-- Missing symbols resolved (any Windows APIs we missed)
+**Lines needing `#ifndef UE4SS_HEADLESS`:**
+- 968-999: `gui_render_thread_tick()` entire function
+- 1009-1013: `on_program_start()` GUI hook registrations
+- 1042-1046: keydown handler GUI rendering
+- 2258-2260: `stop_render_thread()` 
+- 2269-2279: `add_gui_tab()` / `remove_gui_tab()`
+
+### CRITICAL: SettingsManager.cpp - unguarded GUI enum usage
+
+**Lines 144-162**: Uses `GUI::GfxBackend::DX11`, `GUI::RenderMode::ExternalThread` etc. in the settings deserializer.
+
+**Fix**: If we provide stub enums, this will compile fine. The parsed values just won't be used at runtime.
+
+### HIGH: UEHeaderGenerator.cpp - Windows API in determine_primary_game_module_name()
+
+**Lines 4173-4175**: Uses `HMODULE`, `GetModuleHandleW`, `GetModuleFileNameW`, `ARRAYSIZE`.
+
+**Fix**: Wrap with `#if PLATFORM_WINDOWS` and provide Linux fallback using `/proc/self/exe`:
+```cpp
+#if PLATFORM_WINDOWS
+    HMODULE primary_executable_module = GetModuleHandleW(NULL);
+    ...
+#else
+    char exe_buf[1024];
+    ssize_t len = readlink("/proc/self/exe", exe_buf, sizeof(exe_buf)-1);
+    exe_buf[len > 0 ? len : 0] = '\0';
+    FFilePath root_executable_path(ensure_str(std::string(exe_buf)));
+    StringType filename = ensure_str(root_executable_path.filename().replace_extension());
+#endif
+```
+
+### HIGH: LuaMod.cpp - GUI::Dumpers linker errors
+
+**Lines 1863, 1868**: Calls `GUI::Dumpers::call_generate_static_mesh_file()` and `GUI::Dumpers::call_generate_all_actor_file()`.
+
+**Fix**: Wrap with `#ifndef UE4SS_HEADLESS`. These Lua functions (`DumpStaticMeshes`, `DumpAllActors`) will just not be available in headless mode.
+
+### MEDIUM: CppUserModBase.cpp - unguarded GUI references
+
+**Lines 19-28**: Destructor iterates `GUITabs` (which doesn't exist in headless).
+**Lines 56-59**: `register_tab()` function uses `GUI::GUITab`.
+
+**Fix**: Both sections need `#ifndef UE4SS_HEADLESS` guards.
+
+### LOW: UE4SSProgram.hpp - friend declarations for HookedLoadLibrary*
+
+**Lines 374-377**: Friend declarations for Windows-only functions. Won't cause compile error (just declares friendship with non-existent functions) but will cause linker warnings.
+
+**Fix**: Wrap with `#if PLATFORM_WINDOWS`.
+
+---
+
+## Dep Libraries That Need Compilation
+
+These `.cpp` files in `deps/first/` will also need to compile. Known issues:
+
+| Library | Files | Status |
+|---------|-------|--------|
+| Helpers | SysError.cpp, Casting.cpp, Time.cpp, Debug.cpp | DONE - all compile |
+| ArgsParser | main.cpp | DONE - compiles |
+| File | WinFile.cpp | Already `#ifdef _WIN32` guarded |
+| DynamicOutput | OutputDevice.cpp, DebugConsoleDevice.cpp | Already `#if _WIN32` guarded |
+| Unreal/src | UnrealInitializer.cpp, UObject.cpp, UnrealVersion.cpp | NEED `#ifdef _WIN32` guards on `Windows.h` includes. Has `K32GetModuleInformation`, `EnumProcessModules` - need Linux scanner wired in |
+| IniParser | Likely cross-platform | Unknown |
+| JSON | Likely cross-platform | Unknown |
+| LuaMadeSimple/LuaRaw | Lua is cross-platform | Should be fine |
+| Input | PlatformInit.cpp fixed, Win32 source guarded | DONE |
+| SinglePassSigScanner | Windows version guarded, Linux version exists | DONE |
+| MProgram | ErrorObject.hpp has strncpy_s (covered by LinuxCompat) | Should be fine |
+
+---
 
 ## Build Command
 ```bash
 source ~/.xmake/profile
-cd /tmp/RE-UE4SS
-git clone -b feat/linux-headless-port --recurse-submodules git@github.com:quietarcade/RE-UE4SS.git
+cd /tmp && git clone -b feat/linux-headless-port --recurse-submodules git@github.com:quietarcade/RE-UE4SS.git
 cd RE-UE4SS
 xmake f -p linux -a x86_64 -m "Game__Shipping__Linux" --yes
-xmake build -j2
+xmake build -j2 2>&1 | tee /tmp/xmake-build.log
 ```
 
-## Estimated Remaining Work
-- Fix string type (1-2 hours - most impactful decision)
-- Guard remaining GUI/Windows refs (30 min)
-- Fix template specialization issues (30 min)
-- Compile Unreal submodule .cpp files (1-2 hours of iteration)
-- Compile remaining UE4SS .cpp files (1-2 hours)
-- Linking (30 min - mostly dep resolution)
-- Testing on Palworld server (1 hour)
+## Next Session Plan
+1. Apply all fixes from the audit above in ONE batch (estimated 30 min)
+2. Do a single test compile
+3. Fix any remaining issues from the compile (estimated 1-2 rounds)
+4. Begin linking phase
+5. Wire up `UnrealInitializer.cpp` Linux module scanner
 
-Total: ~6-8 more hours of iteration to get a compilable .so, then testing.
+## Estimated Remaining Work
+- Apply audit fixes (1 hour)
+- Unreal/src .cpp file compilation (1-2 hours)
+- Remaining compile errors (1 hour)
+- Linking (30 min)
+- Runtime testing on Palworld (1-2 hours)
+
+Total: ~4-6 more hours to get a working .so
