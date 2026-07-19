@@ -110,7 +110,8 @@ local GNU_COMPILE_OPTIONS = {
         "-Wno-unused-parameter",
         "-Wno-attributes",
         "-Wno-error",
-        "-Wno-template-id-cdtor"
+        "-Wno-template-id-cdtor",
+        "-Wno-changes-meaning"
     }
 }
 
