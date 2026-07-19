@@ -109,7 +109,8 @@ local GNU_COMPILE_OPTIONS = {
         "-Wno-deprecated",
         "-Wno-unused-parameter",
         "-Wno-attributes",
-        "-Wno-error"
+        "-Wno-error",
+        "-Wno-template-id-cdtor"
     }
 }
 

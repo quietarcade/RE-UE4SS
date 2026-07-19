@@ -2,7 +2,9 @@
 
 #include <vector>
 
+#if PLATFORM_WINDOWS
 #include <Unreal/Core/Windows/MinimalWindowsApi.hpp>
+#endif
 
 #include <Mod/CppUserModBase.hpp>
 #include <Mod/Mod.hpp>
@@ -26,8 +28,12 @@ namespace RC
         StringType m_dll_filename{};
         std::filesystem::path m_dlls_path;
 
+#if PLATFORM_WINDOWS
         Unreal::Windows::HMODULE m_main_dll_module = NULL;
         void* m_dlls_path_cookie = NULL;
+#else
+        void* m_main_dll_module = nullptr;
+#endif
         start_type m_start_mod_func = nullptr;
         uninstall_type m_uninstall_mod_func = nullptr;
 
