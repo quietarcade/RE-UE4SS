@@ -22,6 +22,11 @@ namespace RC
 {
     auto get_now_as_string(StringViewType format) -> StringType
     {
+#ifdef PLATFORM_LINUX
+        // On Linux, local_t time_points aren't formattable by fmt - use UTC
+        const auto now = std::chrono::system_clock::now();
+        return fmt::vformat(fmt::detail::to_string_view(format), RC_STD_MAKE_FORMAT_ARGS(now));
+#else
         bool use_local_time = true;
 #ifdef _WIN32
         if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
@@ -49,5 +54,6 @@ namespace RC
             const auto now = std::chrono::system_clock::now();
             return fmt::vformat(fmt::detail::to_string_view(format), RC_STD_MAKE_FORMAT_ARGS(now));
         }
+#endif
     }
 } // namespace RC
