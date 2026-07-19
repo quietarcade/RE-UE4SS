@@ -52,10 +52,12 @@ on_install(function(target) end)
 
 includes("deps")
 includes("UE4SS")
-if get_config("ue4ssCross") ~= "msvc-wine" then
+if is_plat("windows") and get_config("ue4ssCross") ~= "msvc-wine" then
     includes("UVTD")
 end
-includes("cppmods")
+if is_plat("windows") then
+    includes("cppmods")
+end
 
 -- TODO: Remove this before the next release. It only exists to maintain backwards compat
 -- warnings for older mod templates.
