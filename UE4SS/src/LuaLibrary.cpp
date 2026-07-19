@@ -9,7 +9,9 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
+#ifdef PLATFORM_WINDOWS
 #include <Windows.h>
+#endif
 
 namespace RC::LuaLibrary
 {

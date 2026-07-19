@@ -1,7 +1,9 @@
 #define NOMINMAX
+#ifdef PLATFORM_WINDOWS
 #include <Windows.h>
 #ifdef TEXT
 #undef TEXT
+#endif
 #endif
 
 #include <algorithm>
