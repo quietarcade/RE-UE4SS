@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <Input/Handler.hpp>
 #include <Input/KeyDef.hpp>
 #include <Input/Common.hpp>
@@ -100,3 +102,5 @@ namespace RC::Input
     }
 
 } // namespace RC::Input
+
+#endif // PLATFORM_WINDOWS

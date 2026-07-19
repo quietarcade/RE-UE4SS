@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <format>
 #include <future>
 #include <regex>
@@ -926,3 +928,5 @@ namespace RC
         }
     }
 } // namespace RC
+
+#endif // PLATFORM_WINDOWS

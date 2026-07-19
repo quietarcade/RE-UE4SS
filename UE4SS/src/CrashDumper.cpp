@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include <CrashDumper.hpp>
 #include <string>
 #include <format>
@@ -101,3 +103,5 @@ namespace RC
     }
 
 } // namespace RC
+
+#endif // PLATFORM_WINDOWS

@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #define NOMINMAX
 #include <Windows.h>
 #include <cstdio>
@@ -148,3 +150,5 @@ auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_un
     }
     return TRUE;
 }
+
+#endif // PLATFORM_WINDOWS

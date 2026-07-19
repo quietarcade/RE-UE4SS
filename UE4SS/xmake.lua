@@ -1,37 +1,38 @@
 if get_config("ue4ssCross") ~= "msvc-wine" then
-    includes("proxy_generator")
+    if is_plat("windows") then
+        includes("proxy_generator")
+    end
 end
 
-add_requires("imgui v1.92.1", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
-add_requires("ImGuiTextEdit v1.2.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
-add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
-add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+-- GUI/rendering packages - only on Windows (not needed for headless Linux server)
+if is_plat("windows") then
+    add_requires("imgui v1.92.1", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
+    add_requires("ImGuiTextEdit v1.2.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+    add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
+    add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
+    add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+end
+
+-- Cross-platform packages
 add_requires("glaze v2.9.5", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 add_requires("fmt 11.2.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("ue4ssBetaIsStarted")
     set_default(true)
     set_showmenu(true)
-    -- Sets the possible options to only be true or false.
     set_values(true, false)
-
     set_description("Have beta releases started for the current major version")
 
 option("ue4ssIsBeta")
     set_default(true)
     set_showmenu(true)
-    -- Sets the possible options to only be true or false.
     set_values(true, false)
-
     set_description("Is this a beta release")
 
 option("versionCheck")
     set_default(true)
     set_showmenu(true)
-    -- Sets the possible options to only be true or false.
     set_values(true, false)
-
     set_description("Will xmake check the installed MSVC and Rust versions on configuration step")
 
 local projectName = "UE4SS"
@@ -66,22 +67,28 @@ target(projectName)
 
     add_files("src/**.cpp")
 
+    -- Core dependencies (cross-platform)
     add_deps(
         "File", "DynamicOutput", "Unreal",
         "SinglePassSigScanner", "LuaMadeSimple", "Function",
         "IniParser", "JSON", "Input",
         "Constructs", "Helpers", "MProgram",
-        "ScopedTimer", "Profiler", "patternsleuth_bind",
-        "glad", { public = true }
+        "ScopedTimer", "Profiler", { public = true }
     )
 
     add_packages("fmt", { public = true })
+    add_packages("glaze", { public = true })
 
-    add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
-
-    add_packages("glaze", "polyhook_2", { public = true })
-
-    add_links("dbghelp", "psapi", "d3d11", { public = true })
+    if is_plat("windows") then
+        -- Windows-only dependencies
+        add_deps("patternsleuth_bind", "glad", { public = true })
+        add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+        add_packages("polyhook_2", { public = true })
+        add_links("dbghelp", "psapi", "d3d11", { public = true })
+    elseif is_plat("linux") then
+        -- Linux-only dependencies
+        add_links("dl", "pthread", { public = true })
+    end
 
     after_load(function (target)
         local projectRoot = get_config("ue4ssRoot")
@@ -97,14 +104,9 @@ target(projectName)
         target:add("defines", "UE4SS_LIB_BETA_STARTED=" .. (get_config("ue4ssBetaIsStarted") and "1" or "0"), { public = true })
         target:add("defines", "UE4SS_LIB_IS_BETA=" .. (get_config("ue4ssIsBeta") and "1" or "0"), { public = true })
 
-        -- Attempt to get the latest git commit from the UE4SS root directory.
-        -- We have to be explicit about running it in the root UE4SS directory
-        -- in the case where RE-UE4SS is submoduled in another git repo.
-
         import("lib.detect.find_tool")
         local git = assert(find_tool("git"), "git not found!")
 
-        -- init arguments
         local argv = {"rev-parse", "--short", "HEAD"}
         local lastcommit = os.iorunv(git.program, argv, {curdir = get_config("ue4ssRoot")})
         if lastcommit then

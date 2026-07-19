@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #define NOMINMAX
 
 #include <filesystem>
@@ -232,3 +234,5 @@ namespace RC
         }
     }
 } // namespace RC
+
+#endif // PLATFORM_WINDOWS

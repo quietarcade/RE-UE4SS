@@ -12,7 +12,7 @@ includes("LuaMadeSimple")
 includes("LuaRaw")
 includes("MProgram")
 includes("ParserBase")
-if get_config("ue4ssCross") ~= "msvc-wine" then
+if is_plat("windows") and get_config("ue4ssCross") ~= "msvc-wine" then
     includes("patternsleuth_bind")
 end
 includes("Profiler")
@@ -26,7 +26,7 @@ task("manuallyBuildLocalPatternsleuth")
         os.execv("cargo rustc --release --target x86_64-pc-windows-msvc --crate-type=staticlib", {}, {curdir = get_config("ue4ssRoot") .. "/deps/first/patternsleuth_bind"})
     end)
 
-if get_config("ue4ssCross") ~= "msvc-wine" then
+if is_plat("windows") and get_config("ue4ssCross") ~= "msvc-wine" then
 
     -- The patternsleuth target is managed by the cargo.build rule.
     target("patternsleuth")
