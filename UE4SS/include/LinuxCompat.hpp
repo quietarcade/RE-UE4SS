@@ -26,6 +26,11 @@
     #define sprintf_s snprintf
 #endif
 
+#ifndef strncpy_s
+    // strncpy_s(dest, src, count) - simplified version
+    #define strncpy_s(dest, src, count) strncpy(dest, src, count)
+#endif
+
 #ifndef sscanf_s
     #define sscanf_s sscanf
 #endif

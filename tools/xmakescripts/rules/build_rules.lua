@@ -108,7 +108,8 @@ local GNU_COMPILE_OPTIONS = {
         "-fpermissive",
         "-Wno-deprecated",
         "-Wno-unused-parameter",
-        "-Wno-attributes"
+        "-Wno-attributes",
+        "-Wno-error"
     }
 }
 
