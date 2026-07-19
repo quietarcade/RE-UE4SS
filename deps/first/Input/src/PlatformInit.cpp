@@ -1,6 +1,6 @@
 #include <Input/PlatformInputSource.hpp>
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 #include <Input/Platform/Win32AsyncInputSource.hpp>
 #endif
 
@@ -12,7 +12,7 @@ namespace RC::Input
 {
     auto Handler::init() -> void
     {
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
         register_input_source(std::make_shared<Win32AsyncInputSource>(L"ConsoleWindowClass", L"UnrealWindow"));
 #endif
 

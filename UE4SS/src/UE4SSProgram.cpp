@@ -1,6 +1,6 @@
 #define NOMINMAX
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 #include <Windows.h>
 
 #ifdef TEXT
@@ -70,7 +70,7 @@
 #include <Unreal/BitfieldProxy.hpp>
 #include <UnrealDef.hpp>
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 #include <polyhook2/PE/IatHook.hpp>
 #endif
 
@@ -169,7 +169,7 @@ namespace RC
         Output::send(STR("\n##### MEMBER OFFSETS END ({}) #####\n\n"), is_coalesced == IsCoalesced::No ? STR("MemberVariableLayout") : STR("Coalesced"));
     }
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
     void* HookedLoadLibraryA(const char* dll_name)
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
@@ -333,7 +333,7 @@ namespace RC
 
             Output::send(STR("UE4SS Build Configuration: {} ({})\n"), ensure_str(UE4SS_CONFIGURATION), UE4SS_COMPILER);
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
                                                                    std::bit_cast<uint64_t>(&HookedLoadLibraryA),
@@ -482,7 +482,7 @@ namespace RC
         // At that point, the working directory will be "root/<GameName>"
         m_working_directory = m_root_directory;
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
         wchar_t exe_path_buffer[1024];
         GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
         std::filesystem::path game_exe_path = exe_path_buffer;
@@ -502,7 +502,7 @@ namespace RC
         m_game_path_and_exe_name = game_exe_path;
         m_object_dumper_output_directory = m_working_directory;
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
         // Allow loading of DLLs from the game directory
         AddDllDirectory(game_exe_path.c_str());
 #endif
@@ -540,7 +540,7 @@ namespace RC
     {
         settings_manager.Debug.SimpleConsoleEnabled = true;
         create_simple_console();
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
         printf_s("%S\n", FromCharTypePtr<wchar_t>(error_message.data()));
 #else
         fprintf(stderr, "%s\n", ensure_str(std::string(error_message.begin(), error_message.end())).c_str());
@@ -583,7 +583,7 @@ namespace RC
                 return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
             });
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
             if (AllocConsole())
             {
                 FILE* stdin_filename;

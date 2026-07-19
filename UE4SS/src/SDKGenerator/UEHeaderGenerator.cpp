@@ -1,5 +1,5 @@
 #define NOMINMAX
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 #include <Windows.h>
 #ifdef TEXT
 #undef TEXT

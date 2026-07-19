@@ -1,4 +1,4 @@
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 
 #include <Input/Handler.hpp>
 #include <Input/KeyDef.hpp>

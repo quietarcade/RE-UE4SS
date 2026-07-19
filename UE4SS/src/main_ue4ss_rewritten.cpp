@@ -1,4 +1,4 @@
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 
 #define NOMINMAX
 #include <Windows.h>

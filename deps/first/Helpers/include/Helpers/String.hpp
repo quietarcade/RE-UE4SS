@@ -195,7 +195,7 @@ namespace RC
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 #pragma warning(disable : 4996)
         static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
         return converter.from_bytes(input.data(), input.data() + input.length());
@@ -221,7 +221,7 @@ namespace RC
 
     auto inline to_wstring(const std::u16string& input) -> std::wstring
     {
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
         return {input.begin(), input.end()};
 #else
         throw std::runtime_error{"There is no reason to use this function on non-Windows platforms"};
@@ -230,7 +230,7 @@ namespace RC
 
     auto inline to_wstring(std::u16string_view input) -> std::wstring
     {
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
         return {input.begin(), input.end()};
 #else
         throw std::runtime_error{"There is no reason to use this function on non-Windows platforms"};

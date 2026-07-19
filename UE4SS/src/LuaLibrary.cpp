@@ -9,7 +9,7 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 #include <Windows.h>
 #endif
 
