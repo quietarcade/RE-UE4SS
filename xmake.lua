@@ -36,12 +36,14 @@ add_rules("ue4ss.core")
 -- Restrict the compilation modes/configs.
 -- These restrictions are inherited upstream and downstream.
 -- Any project that `includes("UE4SS")` will inherit these global restrictions.
-set_allowedplats("windows")
+set_allowedplats("windows", "linux")
 set_allowedarchs("x64")
 set_allowedmodes(modes)
 
 if is_host("windows") then
     set_defaultmode("Game__Shipping__Win64")
+elseif is_host("linux") then
+    set_defaultmode("Game__Shipping__Linux")
 end
 
 -- Override the `xmake install` behavior for all targets.

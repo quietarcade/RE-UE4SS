@@ -68,6 +68,15 @@ local PLATFORM_TYPES = {
             "_UNICODE"
         },
 
+    },
+    ["Linux"] = {
+        ["defines"] = {
+            "PLATFORM_LINUX",
+            "PLATFORM_UNIX",
+            "OVERRIDE_PLATFORM_HEADER_NAME=Linux",
+            "UBT_COMPILED_PLATFORM=Linux",
+            "UE4SS_HEADLESS"
+        },
     }
 }
 
