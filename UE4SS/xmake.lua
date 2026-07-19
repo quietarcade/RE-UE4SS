@@ -67,6 +67,18 @@ target(projectName)
 
     add_files("src/**.cpp")
 
+    -- Exclude platform-specific files from the wrong platform
+    if is_plat("linux") then
+        remove_files("src/main_ue4ss_rewritten.cpp")
+        remove_files("src/CrashDumper.cpp")
+        remove_files("src/Mod/CppMod.cpp")
+        remove_files("src/GUI/**.cpp")
+    elseif is_plat("windows") then
+        remove_files("src/main_ue4ss_linux.cpp")
+        remove_files("src/CrashDumperLinux.cpp")
+        remove_files("src/Mod/CppModLinux.cpp")
+    end
+
     -- Core dependencies (cross-platform)
     add_deps(
         "File", "DynamicOutput", "Unreal",

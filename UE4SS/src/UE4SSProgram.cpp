@@ -1,9 +1,17 @@
 #define NOMINMAX
 
+#ifdef PLATFORM_WINDOWS
 #include <Windows.h>
 
 #ifdef TEXT
 #undef TEXT
+#endif
+#endif // PLATFORM_WINDOWS
+
+#ifdef PLATFORM_LINUX
+#include <dlfcn.h>
+#include <unistd.h>
+#include <linux/limits.h>
 #endif
 
 #include <algorithm>
@@ -16,9 +24,11 @@
 #include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
+#ifndef UE4SS_HEADLESS
 #include <GUI/ConsoleOutputDevice.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/LiveView.hpp>
+#endif
 #include <Helpers/ASM.hpp>
 #include <Helpers/Format.hpp>
 #include <Helpers/Integer.hpp>
@@ -60,7 +70,9 @@
 #include <Unreal/BitfieldProxy.hpp>
 #include <UnrealDef.hpp>
 
+#ifdef PLATFORM_WINDOWS
 #include <polyhook2/PE/IatHook.hpp>
+#endif
 
 #include <FilesystemWatcher.hpp>
 
@@ -157,6 +169,7 @@ namespace RC
         Output::send(STR("\n##### MEMBER OFFSETS END ({}) #####\n\n"), is_coalesced == IsCoalesced::No ? STR("MemberVariableLayout") : STR("Coalesced"));
     }
 
+#ifdef PLATFORM_WINDOWS
     void* HookedLoadLibraryA(const char* dll_name)
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
@@ -188,6 +201,7 @@ namespace RC
         program.fire_dll_load_for_cpp_mods(ToCharTypePtr(dll_name));
         return lib;
     }
+#endif // PLATFORM_WINDOWS
 
     UE4SSProgram::UE4SSProgram(const std::filesystem::path& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
     {
@@ -223,7 +237,9 @@ namespace RC
 
             m_crash_dumper.set_full_memory_dump(settings_manager.CrashDump.FullMemoryDump);
 
+#ifndef UE4SS_HEADLESS
             m_debugging_gui.set_gfx_backend(settings_manager.Debug.GraphicsAPI);
+#endif
 
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
@@ -248,6 +264,7 @@ namespace RC
                 m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
                     return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
                 });
+#ifndef UE4SS_HEADLESS
                 if (settings_manager.Debug.DebugConsoleVisible)
                 {
                     switch (settings_manager.Debug.RenderMode)
@@ -262,6 +279,7 @@ namespace RC
                         break;
                     }
                 }
+#endif // UE4SS_HEADLESS
             }
 
             // This is experimental code that's here only for future reference
@@ -315,6 +333,7 @@ namespace RC
 
             Output::send(STR("UE4SS Build Configuration: {} ({})\n"), ensure_str(UE4SS_CONFIGURATION), UE4SS_COMPILER);
 
+#ifdef PLATFORM_WINDOWS
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
                                                                    std::bit_cast<uint64_t>(&HookedLoadLibraryA),
@@ -342,6 +361,7 @@ namespace RC
                                                                       &m_hook_trampoline_load_library_ex_w,
                                                                       L"");
             m_load_library_ex_w_hook->hook();
+#endif // PLATFORM_WINDOWS
 
             Unreal::UnrealInitializer::SetupUnrealModules();
 
@@ -462,9 +482,17 @@ namespace RC
         // At that point, the working directory will be "root/<GameName>"
         m_working_directory = m_root_directory;
 
+#ifdef PLATFORM_WINDOWS
         wchar_t exe_path_buffer[1024];
         GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
         std::filesystem::path game_exe_path = exe_path_buffer;
+#elif defined(PLATFORM_LINUX)
+        char exe_path_buffer[PATH_MAX];
+        ssize_t len = readlink("/proc/self/exe", exe_path_buffer, sizeof(exe_path_buffer) - 1);
+        if (len > 0) exe_path_buffer[len] = '\0';
+        else exe_path_buffer[0] = '\0';
+        std::filesystem::path game_exe_path = exe_path_buffer;
+#endif
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
         m_legacy_root_directory = game_directory_path;
 
@@ -474,8 +502,10 @@ namespace RC
         m_game_path_and_exe_name = game_exe_path;
         m_object_dumper_output_directory = m_working_directory;
 
+#ifdef PLATFORM_WINDOWS
         // Allow loading of DLLs from the game directory
         AddDllDirectory(game_exe_path.c_str());
+#endif
 
         for (const auto& item : std::filesystem::directory_iterator(m_root_directory))
         {
@@ -510,7 +540,11 @@ namespace RC
     {
         settings_manager.Debug.SimpleConsoleEnabled = true;
         create_simple_console();
+#ifdef PLATFORM_WINDOWS
         printf_s("%S\n", FromCharTypePtr<wchar_t>(error_message.data()));
+#else
+        fprintf(stderr, "%s\n", ensure_str(std::string(error_message.begin(), error_message.end())).c_str());
+#endif
     }
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
@@ -549,6 +583,7 @@ namespace RC
                 return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
             });
 
+#ifdef PLATFORM_WINDOWS
             if (AllocConsole())
             {
                 FILE* stdin_filename;
@@ -558,6 +593,8 @@ namespace RC
                 freopen_s(&stdout_filename, "CONOUT$", "w", stdout);
                 freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
             }
+#endif
+            // On Linux, stdout/stderr are already available - no console allocation needed
         }
     }
 
