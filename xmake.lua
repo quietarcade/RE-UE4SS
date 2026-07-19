@@ -46,6 +46,11 @@ elseif is_host("linux") then
     set_defaultmode("Game__Shipping__Linux")
 end
 
+-- Global platform defines that must be available to ALL targets during compilation
+if is_plat("linux") then
+    add_defines("PLATFORM_LINUX", "PLATFORM_UNIX", "UE4SS_HEADLESS")
+end
+
 -- Override the `xmake install` behavior for all targets.
 -- Targets can re-override the on_install() function to implement custom installation behavior.
 on_install(function(target) end)
