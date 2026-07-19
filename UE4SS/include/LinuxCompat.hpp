@@ -52,6 +52,11 @@ inline int freopen_s(FILE** pFile, const char* filename, const char* mode, FILE*
     #define __debugbreak() __builtin_trap()
 #endif
 
+// __declspec replacement - map to GCC visibility attribute
+#ifndef __declspec
+    #define __declspec(x)
+#endif
+
 // OutputDebugStringA/W - no-op on Linux
 #ifndef OutputDebugStringA
     #define OutputDebugStringA(x) ((void)0)

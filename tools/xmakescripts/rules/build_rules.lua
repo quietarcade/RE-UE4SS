@@ -104,7 +104,11 @@ local CLANG_COMPILE_OPTIONS = {
 
 local GNU_COMPILE_OPTIONS = {
     ["cxflags"] = {
-        "-fms-extensions"
+        "-fms-extensions",
+        "-fpermissive",
+        "-Wno-deprecated",
+        "-Wno-unused-parameter",
+        "-Wno-attributes"
     }
 }
 
