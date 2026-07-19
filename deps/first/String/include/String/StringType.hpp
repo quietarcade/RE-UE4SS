@@ -9,7 +9,7 @@
 // This is a debug flag to force the use of u16string for testing purposes
 // char16_t and wchar_t are two different types, so we need to force the use of one of them
 // to ensure we have covered all the cases.
-// For headless Linux builds, use char (ANSI) since we don't need wide string output
+// For headless Linux builds, use wchar_t (matches UE TCHAR on Linux, avoids overload conflicts)
 #if defined(__linux__) && !defined(UE4SS_HEADLESS)
 #define FORCE_U16
 #endif
@@ -17,16 +17,14 @@
 namespace RC
 {
 
-#ifdef UE4SS_HEADLESS
-    using CharType = char;
-#define STR(str) str
-#define RC_IS_ANSI 1
-#elif defined(FORCE_U16)
+#ifdef FORCE_U16
     using CharType = char16_t;
 #define STR(str) u##str
+#define RC_IS_ANSI 0
 #else
     using CharType = wchar_t;
 #define STR(str) L##str
+#define RC_IS_ANSI 0
 #endif
 
     using StringType = std::basic_string<CharType>;

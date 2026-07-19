@@ -543,7 +543,9 @@ namespace RC
 #if PLATFORM_WINDOWS
         printf_s("%S\n", FromCharTypePtr<wchar_t>(error_message.data()));
 #else
-        fprintf(stderr, "%s\n", ensure_str(std::string(error_message.begin(), error_message.end())).c_str());
+        // On Linux with wchar_t CharType, convert to narrow for stderr output
+        std::string narrow(error_message.begin(), error_message.end());
+        fprintf(stderr, "%s\n", narrow.c_str());
 #endif
     }
 

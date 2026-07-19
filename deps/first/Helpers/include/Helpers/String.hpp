@@ -502,15 +502,7 @@ namespace RC
     template <typename TargetCharT, typename T>
     auto inline ensure_str_as(T&& arg) -> std::basic_string<TargetCharT>
     {
-        auto result = to_charT<TargetCharT>(std::forward<T>(arg));
-        if constexpr (std::is_same_v<decltype(result), std::basic_string<TargetCharT>>)
-        {
-            return result;
-        }
-        else
-        {
-            return std::basic_string<TargetCharT>(result);
-        }
+        return to_charT<TargetCharT>(std::forward<T>(arg));
     }
 
     // Ensure that a string is compatible with UE4SS, converting it if neccessary

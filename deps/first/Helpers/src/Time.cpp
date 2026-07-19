@@ -23,9 +23,12 @@ namespace RC
     auto get_now_as_string(StringViewType format) -> StringType
     {
 #ifdef PLATFORM_LINUX
-        // On Linux, local_t time_points aren't formattable by fmt - use UTC
+        // On Linux, fmt chrono with local_t doesn't work. Use system_clock and
+        // format with narrow chars, then widen to wchar_t (our CharType on Linux).
         const auto now = std::chrono::system_clock::now();
-        return fmt::vformat(fmt::detail::to_string_view(format), RC_STD_MAKE_FORMAT_ARGS(now));
+        std::string narrow_format(format.begin(), format.end());
+        std::string narrow_result = fmt::vformat(narrow_format, fmt::make_format_args(now));
+        return StringType(narrow_result.begin(), narrow_result.end());
 #else
         bool use_local_time = true;
 #ifdef _WIN32
