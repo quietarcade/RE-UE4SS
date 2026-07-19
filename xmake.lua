@@ -37,7 +37,7 @@ add_rules("ue4ss.core")
 -- These restrictions are inherited upstream and downstream.
 -- Any project that `includes("UE4SS")` will inherit these global restrictions.
 set_allowedplats("windows", "linux")
-set_allowedarchs("x64")
+set_allowedarchs("x64", "x86_64")
 set_allowedmodes(modes)
 
 if is_host("windows") then
