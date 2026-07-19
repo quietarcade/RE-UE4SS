@@ -10,8 +10,10 @@
 #include <Common.hpp>
 #include <CrashDumper.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
+#ifndef UE4SS_HEADLESS
 #include <GUI/GUI.hpp>
 #include <GUI/GUITab.hpp>
+#endif
 #include <Input/Handler.hpp>
 #include <LuaLibrary.hpp>
 #include <MProgram.hpp>
@@ -127,7 +129,9 @@ namespace RC
         std::filesystem::path m_legacy_root_directory;
         Output::DebugConsoleDevice* m_debug_console_device{};
         Output::ConsoleDevice* m_console_device{};
+#ifndef UE4SS_HEADLESS
         GUI::DebuggingGUI m_debugging_gui{};
+#endif
 
         using EventCallable = std::function<void()>;
         // Legacy types for backward compatibility with C++ mods
@@ -250,6 +254,7 @@ namespace RC
         RC_UE4SS_API auto generate_uht_compatible_headers() -> void;
         RC_UE4SS_API auto generate_cxx_headers(const std::filesystem::path& output_dir) -> void;
         RC_UE4SS_API auto generate_lua_types(const std::filesystem::path& output_dir) -> void;
+#ifndef UE4SS_HEADLESS
         auto get_debugging_ui() -> GUI::DebuggingGUI&
         {
             return m_debugging_gui;
@@ -265,6 +270,7 @@ namespace RC
         {
             return ImGui::GetAllocatorFunctions(alloc_func, free_func, user_data);
         }
+#endif // UE4SS_HEADLESS
         RC_UE4SS_API auto queue_event(EventCallable callable) -> void;
         // Legacy overload for backward compatibility with C++ mods
         RC_UE4SS_API auto queue_event(LegacyEventCallable callable, void* data) -> void;

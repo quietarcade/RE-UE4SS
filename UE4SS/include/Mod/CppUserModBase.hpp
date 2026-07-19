@@ -5,7 +5,9 @@
 
 #include <Common.hpp>
 #include <File/Macros.hpp>
+#ifndef UE4SS_HEADLESS
 #include <GUI/GUITab.hpp>
+#endif
 #include <Input/Handler.hpp>
 
 #include <String/StringType.hpp>
@@ -31,7 +33,9 @@ namespace RC
     class CppUserModBase
     {
       protected:
+#ifndef UE4SS_HEADLESS
         std::vector<std::shared_ptr<GUI::GUITab>> GUITabs{};
+#endif
 
       public:
         StringType ModName{};
