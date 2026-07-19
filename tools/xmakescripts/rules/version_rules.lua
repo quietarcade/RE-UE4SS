@@ -24,7 +24,9 @@ local function parse_version(ver)
 end
 
 rule("ue4ss.check.minimum.version")
-    add_deps("check.msvc.ver", "check.rust.ver")
+    if is_plat("windows") then
+        add_deps("check.msvc.ver", "check.rust.ver")
+    end
 
 -- This rule checks the MSVC version number and raises an error if it is below the minimum.
 rule("check.msvc.ver")
