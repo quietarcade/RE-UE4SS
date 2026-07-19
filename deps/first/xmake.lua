@@ -36,7 +36,7 @@ if is_plat("windows") and get_config("ue4ssCross") ~= "msvc-wine" then
         -- Exposes the rust *.rs files to the Visual Studio project filters.
         add_extrafiles("patternsleuth/**.rs")
 
-else
+elseif is_plat("windows") then
     target("patternsleuth_bind")
         set_kind("static")
         add_linkdirs(os.scriptdir() .. "/patternsleuth_bind/target/x86_64-pc-windows-msvc/release", {public = true})
@@ -48,3 +48,4 @@ else
             task.run("manuallyBuildLocalPatternsleuth")
         end)
 end
+-- On Linux, patternsleuth is not used (Linux has its own memory scanner)
