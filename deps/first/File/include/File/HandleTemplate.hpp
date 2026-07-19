@@ -106,46 +106,35 @@ namespace RC::File
             m_internal_handle.invalidate_serialization();
         }
 
-        template <typename SerializedDataType>
-        auto serialize_item(SerializedDataType data) -> void
-        {
-            throw std::runtime_error{"not reached"};
-        }
-
-        template <>
+        // Overloaded serialize_item for different types (avoids in-class template specialization, which GCC rejects)
         auto serialize_item(unsigned long data) -> void
         {
             m_internal_handle.serialize_item({.data_type = GenericDataType::UnsignedLong, .data_ulong = data}, false);
         }
 
-        template <>
         auto serialize_item(signed long data) -> void
         {
             m_internal_handle.serialize_item({.data_type = GenericDataType::SignedLong, .data_long = data}, false);
         }
 
-        template <>
         auto serialize_item(unsigned long long data) -> void
         {
             m_internal_handle.serialize_item({.data_type = GenericDataType::UnsignedLongLong, .data_ulonglong = data}, false);
         }
 
-        template <>
         auto serialize_item(signed long long data) -> void
         {
             m_internal_handle.serialize_item({.data_type = GenericDataType::SignedLongLong, .data_longlong = data}, false);
         }
 
-        template <>
         auto serialize_item(unsigned int data) -> void
         {
-            serialize_item<unsigned long>(data);
+            serialize_item(static_cast<unsigned long>(data));
         }
 
-        template <>
         auto serialize_item(signed int data) -> void
         {
-            serialize_item<signed long>(data);
+            serialize_item(static_cast<signed long>(data));
         }
 
         template <typename SerializedDataType>
