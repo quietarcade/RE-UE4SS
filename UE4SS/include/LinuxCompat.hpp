@@ -60,4 +60,54 @@ inline int freopen_s(FILE** pFile, const char* filename, const char* mode, FILE*
     #define OutputDebugStringW(x) ((void)0)
 #endif
 
+// DLL export/import macros - on Linux shared libs, use visibility attribute or just empty
+#ifndef RC_DYNOUT_API
+    #define RC_DYNOUT_API
+#endif
+#ifndef RC_FILE_API
+    #define RC_FILE_API
+#endif
+#ifndef RC_UE4SS_API
+    #define RC_UE4SS_API
+#endif
+#ifndef RC_UE_API
+    #define RC_UE_API
+#endif
+#ifndef RC_HELPERS_API
+    #define RC_HELPERS_API
+#endif
+#ifndef RC_INI_API
+    #define RC_INI_API
+#endif
+#ifndef RC_JSON_API
+    #define RC_JSON_API
+#endif
+#ifndef RC_INPUT_API
+    #define RC_INPUT_API
+#endif
+#ifndef RC_LMS_API
+    #define RC_LMS_API
+#endif
+#ifndef RC_FUNCTION_API
+    #define RC_FUNCTION_API
+#endif
+#ifndef RC_PARSER_BASE_API
+    #define RC_PARSER_BASE_API
+#endif
+#ifndef RC_CONSTRUCTS_API
+    #define RC_CONSTRUCTS_API
+#endif
+#ifndef RC_SCOPED_TIMER_API
+    #define RC_SCOPED_TIMER_API
+#endif
+#ifndef RC_SINGLE_PASS_SIG_SCANNER_API
+    #define RC_SINGLE_PASS_SIG_SCANNER_API
+#endif
+#ifndef RC_MPROGRAM_API
+    #define RC_MPROGRAM_API
+#endif
+#ifndef RC_ASM_HELPER_API
+    #define RC_ASM_HELPER_API
+#endif
+
 #endif // PLATFORM_LINUX
