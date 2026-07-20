@@ -1,5 +1,7 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <glaze/glaze.hpp>
+// glaze v2.9.5 compat: glz::generic was renamed from glz::json_t
+namespace glz { using generic = json_t; }
 #include <SDKGenerator/Common.hpp>
 #include <SDKGenerator/JSONDumper.hpp>
 #include <Timer/ScopedTimer.hpp>
