@@ -388,9 +388,13 @@ namespace RC
             Output::send(STR("game executable directory: {}\n"), ensure_str(m_game_executable_directory));
             Output::send(STR("game executable: {} ({} bytes)\n\n\n"), ensure_str(m_game_path_and_exe_name), std::filesystem::file_size(m_game_path_and_exe_name));
             Output::send(STR("mods directories: \n"));
-            for (const auto& [index, mod_directory] : std::ranges::enumerate_view(m_mods_directories))
             {
-                Output::send(STR("[{}] {}\n"), index, ensure_str(mod_directory));
+                size_t index = 0;
+                for (const auto& mod_directory : m_mods_directories)
+                {
+                    Output::send(STR("[{}] {}\n"), index, ensure_str(mod_directory));
+                    ++index;
+                }
             }
             Output::send(STR("\n"));
             Output::send(STR("log directory: {}\n"), ensure_str(m_log_directory));
