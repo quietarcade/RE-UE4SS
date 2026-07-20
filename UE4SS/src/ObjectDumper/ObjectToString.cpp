@@ -28,7 +28,7 @@ namespace RC::ObjectDumper
         auto out_address = address;
         if (UE4SSProgram::settings_manager.ObjectDumper.UseModuleOffsets)
         {
-            out_address -= std::bit_cast<uintptr_t>(SigScannerStaticData::m_modules_info.array[std::to_underlying(ScanTarget::MainExe)].lpBaseOfDll);
+            out_address -= std::bit_cast<uintptr_t>(SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)].lpBaseOfDll);
         }
         return out_address;
     }
