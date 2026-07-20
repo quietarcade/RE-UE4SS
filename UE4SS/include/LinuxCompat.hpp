@@ -57,6 +57,11 @@ inline int freopen_s(FILE** pFile, const char* filename, const char* mode, FILE*
     #define __debugbreak() __builtin_trap()
 #endif
 
+// __int64 is MSVC-specific
+#ifndef __int64
+    #define __int64 long long
+#endif
+
 // __declspec replacement - map to GCC visibility attribute
 #ifndef __declspec
     #define __declspec(x)
