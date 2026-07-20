@@ -1004,7 +1004,7 @@ namespace RC
             lua_pop(L, 2); // Pop nil and ue4ss_loaded_modules
             
             // Try to load the file
-            std::ifstream file(wide_path, std::ios::binary);
+            std::ifstream file(std::filesystem::path(wide_path), std::ios::binary);
             if (!file.is_open())
             {
                 attempted_paths_str += "\n\t" + path + " (cannot open)";
@@ -5835,7 +5835,7 @@ Overloads:
             }
 
             // Read the file content
-            std::ifstream file(script_path, std::ios::binary);
+            std::ifstream file(std::filesystem::path(script_path), std::ios::binary);
             if (!file.is_open())
             {
                 throw std::runtime_error(fmt::format("Failed to open script file: {}", to_utf8_string(script_path)));
