@@ -4170,6 +4170,7 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::determine_primary_game_module_name() -> StringType
     {
+#if PLATFORM_WINDOWS
         HMODULE primary_executable_module = GetModuleHandleW(NULL);
         CharType module_name_buffer[1024]{'\0'};
         GetModuleFileNameW(primary_executable_module, FromCharTypePtr<wchar_t>(module_name_buffer), ARRAYSIZE(module_name_buffer));
@@ -4185,6 +4186,21 @@ namespace RC::UEGenerator
             filename.erase(filename.length() - shipping_postfix.length());
         }
         return filename;
+#else
+        // Linux: read executable name from /proc/self/exe
+        char exe_buf[1024]{};
+        ssize_t len = readlink("/proc/self/exe", exe_buf, sizeof(exe_buf) - 1);
+        if (len > 0) exe_buf[len] = '\0';
+        std::filesystem::path exe_path(exe_buf);
+        std::string narrow_name = exe_path.stem().string();
+        // Remove the shipping file postfix
+        std::string shipping_postfix = "-Linux-Shipping";
+        if (narrow_name.ends_with(shipping_postfix))
+        {
+            narrow_name.erase(narrow_name.length() - shipping_postfix.length());
+        }
+        return ensure_str(narrow_name);
+#endif
     }
 
     auto UEHeaderGenerator::generate_cross_module_include(UObject* object, const StringType& module_name, const StringType& fallback_name) -> StringType

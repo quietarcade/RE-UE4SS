@@ -1,7 +1,14 @@
 #pragma once
 
+#include <string>
+
 #ifdef UE4SS_HEADLESS
-// GUI not available in headless builds
+// Provide stub enum types so SettingsManager.hpp compiles in headless mode
+namespace RC::GUI {
+    enum class GfxBackend { DX11, GLFW3_OpenGL3 };
+    enum class RenderMode { ExternalThread, EngineTick, GameViewportClientTick };
+    inline auto render_mode_to_string(RenderMode) -> std::string { return "Headless"; }
+}
 #else
 
 #include <functional>

@@ -1860,12 +1860,16 @@ Overloads:
             });
 
             lua.register_function("DumpStaticMeshes", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+#ifndef UE4SS_HEADLESS
                 GUI::Dumpers::call_generate_static_mesh_file();
+#endif
                 return 0;
             });
 
             lua.register_function("DumpAllActors", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+#ifndef UE4SS_HEADLESS
                 GUI::Dumpers::call_generate_all_actor_file();
+#endif
                 return 0;
             });
 

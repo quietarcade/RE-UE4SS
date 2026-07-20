@@ -967,6 +967,7 @@ namespace RC
 
     static bool s_gui_initialized_for_game_thread{};
     static bool s_gui_initializing_for_game_thread{};
+#ifndef UE4SS_HEADLESS
     auto gui_render_thread_tick() -> void
     {
         if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::ExternalThread)
@@ -995,6 +996,7 @@ namespace RC
         }
         UE4SSProgram::get_program().get_debugging_ui().main_loop_internal();
     }
+#endif // UE4SS_HEADLESS
 
     auto UE4SSProgram::on_program_start() -> void
     {
@@ -1006,6 +1008,7 @@ namespace RC
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
 
+#ifndef UE4SS_HEADLESS
         if (settings_manager.Debug.RenderMode == GUI::RenderMode::EngineTick)
         {
             Hook::RegisterEngineTickPostCallback([](auto&,...){gui_render_thread_tick(); }, {false, false, STR("UE4SS"), STR("ImGuiRenderHook")});
@@ -1055,6 +1058,7 @@ namespace RC
                 });
             });
         }
+#endif // UE4SS_HEADLESS
 
 #ifdef TIME_FUNCTION_MACRO_ENABLED
         register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
@@ -1345,9 +1349,9 @@ namespace RC
                 {
                     auto mod_name = ensure_str(sub_directory.path().stem());
                     // Create the mod but don't install it yet
-                    if (!find_mod_by_name<LuaMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "scripts"))
+                    if (!find_mod_by_name_lua(mod_name) && std::filesystem::exists(sub_directory.path() / "scripts"))
                         m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
-                    if (!find_mod_by_name<CppMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "dlls"))
+                    if (!find_mod_by_name_cpp(mod_name) && std::filesystem::exists(sub_directory.path() / "dlls"))
                         m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
                 }
             }
@@ -2251,6 +2255,7 @@ namespace RC
 
     auto UE4SSProgram::stop_render_thread() -> void
     {
+#ifndef UE4SS_HEADLESS
         if (!get_debugging_ui().is_open())
         {
             return;
@@ -2264,8 +2269,10 @@ namespace RC
         {
             get_debugging_ui().request_exit();
         }
+#endif
     }
 
+#ifndef UE4SS_HEADLESS
     auto UE4SSProgram::add_gui_tab(std::shared_ptr<GUI::GUITab> tab) -> void
     {
         m_debugging_gui.add_tab(tab);
@@ -2275,6 +2282,7 @@ namespace RC
     {
         m_debugging_gui.remove_tab(tab);
     }
+#endif // UE4SS_HEADLESS
 
     auto UE4SSProgram::queue_event(EventCallable callable) -> void
     {
@@ -2378,14 +2386,38 @@ namespace RC
         }
     }
 
+    auto UE4SSProgram::find_mod_by_name_lua(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+    {
+        return static_cast<LuaMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
+            return dynamic_cast<LuaMod*>(elem);
+        }));
+    }
+
+    auto UE4SSProgram::find_mod_by_name_cpp(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
+    {
+        return static_cast<CppMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
+            return dynamic_cast<CppMod*>(elem);
+        }));
+    }
+
+    auto UE4SSProgram::find_mod_by_name_lua(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+    {
+        return find_mod_by_name_lua(ensure_str(mod_name), is_installed, is_started);
+    }
+
+    auto UE4SSProgram::find_mod_by_name_cpp(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
+    {
+        return find_mod_by_name_cpp(ensure_str(mod_name), is_installed, is_started);
+    }
+
     auto UE4SSProgram::find_lua_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
-        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
+        return find_mod_by_name_lua(ensure_str(mod_name), installed_only, is_started);
     }
 
     auto UE4SSProgram::find_lua_mod_by_name(StringViewType mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
-        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
+        return find_mod_by_name_lua(mod_name, installed_only, is_started);
     }
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType
