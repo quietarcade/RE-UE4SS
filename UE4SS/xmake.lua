@@ -70,6 +70,7 @@ target(projectName)
     -- Exclude platform-specific files from the wrong platform
     if is_plat("linux") then
         add_defines("UE4SS_HEADLESS", "PLATFORM_LINUX", "PLATFORM_UNIX", { public = true })
+        add_cxxflags("-fno-char8_t", "-fpermissive", "-Wno-error", {force = true})
         remove_files("src/main_ue4ss_rewritten.cpp")
         remove_files("src/CrashDumper.cpp")
         remove_files("src/Mod/CppMod.cpp")
