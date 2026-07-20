@@ -106,12 +106,16 @@ local GNU_COMPILE_OPTIONS = {
     ["cxflags"] = {
         "-fms-extensions",
         "-fpermissive",
+        "-fno-char8_t",
         "-Wno-deprecated",
         "-Wno-unused-parameter",
         "-Wno-attributes",
         "-Wno-error",
         "-Wno-template-id-cdtor",
         "-Wno-changes-meaning"
+    },
+    ["cxxflags"] = {
+        "-fno-char8_t"
     }
 }
 

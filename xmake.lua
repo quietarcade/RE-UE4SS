@@ -50,6 +50,7 @@ end
 if is_plat("linux") then
     add_defines("PLATFORM_LINUX", "PLATFORM_UNIX", "UE4SS_HEADLESS")
     add_forceincludes(path.join(get_config("ue4ssRoot"), "UE4SS/include/LinuxCompat.hpp"))
+    add_cxxflags("-fpermissive", "-fno-char8_t", "-Wno-error", {force = true})
 end
 
 -- Override the `xmake install` behavior for all targets.
