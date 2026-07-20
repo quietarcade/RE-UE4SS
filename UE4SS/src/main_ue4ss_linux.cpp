@@ -16,6 +16,7 @@
 #include <thread>
 
 #include "UE4SSProgram.hpp"
+#include <fenv.h>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
 
@@ -78,9 +79,25 @@ static void ue4ss_init_thread()
 
     fprintf(stderr, "[UE4SS-Linux] Library path: %s\n", lib_path.c_str());
 
-    s_program = new UE4SSProgram(lib_path, {});
-    s_program->init();
+    try {
+        fedisableexcept(FE_ALL_EXCEPT);
+        fprintf(stderr, "[UE4SS-Linux] About to construct UE4SSProgram...\n");
+        s_program = new UE4SSProgram(lib_path, {});
+        fprintf(stderr, "[UE4SS-Linux] Created UE4SSProgram, calling init()...\n");
+        s_program->init();
+        fprintf(stderr, "[UE4SS-Linux] init() completed successfully\n");
+    } catch (const std::exception& e) {
+        fprintf(stderr, "[UE4SS-Linux] EXCEPTION during init: %s\n", e.what());
+        return;
+    } catch (...) {
+        fprintf(stderr, "[UE4SS-Linux] UNKNOWN EXCEPTION during init\n");
+        return;
+    }
 
+
+
+
+    fprintf(stderr, "[UE4SS-Linux] init() completed successfully\n");
     if (auto e = s_program->get_error_object(); e->has_error())
     {
         if (!Output::has_internal_error())
@@ -104,7 +121,11 @@ static void ue4ss_linux_entry()
     fprintf(stderr, "[UE4SS-Linux] Loaded via LD_PRELOAD, initializing...\n");
 
     // Launch init in a separate thread so we don't block the game's startup
-    std::thread init_thread(ue4ss_init_thread);
+    // Delay init to avoid static initialization order issues
+    std::thread init_thread([]{
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+        ue4ss_init_thread();
+    });
     init_thread.detach();
 }
 

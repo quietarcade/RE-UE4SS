@@ -2,6 +2,8 @@
 // Hot-reload filesystem watching is not needed for dedicated server use
 
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <thread>
+#include <chrono>
 
 namespace RC
 {
@@ -18,5 +20,23 @@ namespace RC
     auto stop_filesystem_watcher(FilesystemWatcher& watcher) -> void
     {
         // No-op
+    }
+
+    FilesystemWatcher::~FilesystemWatcher()
+    {
+        m_stop_source.request_stop();
+        if (m_polling_thread.joinable())
+        {
+            m_polling_thread.join();
+        }
+    }
+
+    auto FilesystemWatcher::poll(std::stop_token stop_token) -> void
+    {
+        // No-op: filesystem watching disabled on headless Linux
+        while (!stop_token.stop_requested())
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
     }
 }

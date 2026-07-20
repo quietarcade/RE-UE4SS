@@ -16,10 +16,18 @@
 #include <sys/mman.h>
 #include <vector>
 
+#include <mutex>
 #include <SigScanner/SinglePassSigScanner.hpp>
-
 namespace RC
 {
+
+    ScanTargetArray SigScannerStaticData::m_modules_info;
+    bool SigScannerStaticData::m_is_modular;
+    uint32_t SinglePassScanner::m_num_threads = 8;
+    SinglePassScanner::ScanMethod SinglePassScanner::m_scan_method = ScanMethod::Scalar;
+    uint32_t SinglePassScanner::m_multithreading_module_size_threshold = 0x1000000;
+    std::mutex SinglePassScanner::m_scanner_mutex{};
+
 
 /**
  * Represents a memory region parsed from /proc/self/maps
@@ -216,6 +224,18 @@ static auto get_all_loaded_modules() -> std::vector<LoadedModule>
     dl_iterate_phdr(dl_iterate_callback, &modules);
     return modules;
 }
+
+
+    auto ScanTargetToString(ScanTarget target) -> std::string
+    {
+        return "unknown";
+    }
+
+    auto SinglePassScanner::start_scan(std::unordered_map<ScanTarget, std::vector<SignatureContainer>>& scan_targets) -> void
+    {
+        // Linux stub - sig scanning not yet fully implemented
+        // TODO: Implement pattern scanning over /proc/self/maps regions
+    }
 
 } // namespace RC
 

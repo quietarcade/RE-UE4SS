@@ -15,6 +15,11 @@
 #endif
 
 #include <algorithm>
+extern "C" {
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+}
 #include <cwctype>
 #include <format>
 #include <fstream>
@@ -207,20 +212,25 @@ namespace RC
     {
         ProfilerScope();
         s_program = this;
+        fprintf(stderr, "[UE4SS] Constructor entered, calling setup_paths...\n");
 
         try
         {
             setup_paths(moduleFilePath);
+            fprintf(stderr, "[UE4SS] setup_paths done, reading settings...\n");
 
             try
             {
-                settings_manager.deserialize(m_settings_path_and_file);
+            fprintf(stderr, "[UE4SS] Settings path: %s\n", m_settings_path_and_file.string().c_str());
+                fprintf(stderr, "[UE4SS] SKIPPING settings deserialize for debugging\n");
+                // settings_manager.deserialize(m_settings_path_and_file);
             }
             catch (std::exception& e)
             {
                 create_emergency_console_for_early_error(fmt::format(STR("The IniParser failed to parse: {}"), ensure_str(e.what())));
                 return;
             }
+            fprintf(stderr, "[UE4SS] Settings loaded, checking engine version...\n");
 
             if (settings_manager.EngineVersionOverride.DebugBuild)
             {
@@ -242,8 +252,10 @@ namespace RC
 #endif
 
             // Setup the log file
+            fprintf(stderr, "[UE4SS] About to setup log file device...\n");
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
             file_device.set_file_name_and_path(ensure_str((m_log_directory / m_log_file_name)));
+            fprintf(stderr, "[UE4SS] Log file device configured\n");
 
             if (const auto ue4ss_mods_paths_var_raw = std::getenv("UE4SS_MODS_PATHS"); ue4ss_mods_paths_var_raw)
             {
@@ -371,7 +383,9 @@ namespace RC
 
             setup_mods();
             install_cpp_mods();
+            #ifndef PLATFORM_LINUX
             start_cpp_mods(IsInitialStartup::Yes);
+#endif
 
             if (m_has_game_specific_config)
             {
@@ -431,7 +445,25 @@ namespace RC
 
         try
         {
-            setup_unreal();
+#ifdef PLATFORM_LINUX
+            Output::send(STR("Linux: Skipping Unreal Engine scanning\n"));
+            Output::send(STR("Linux: Starting Lua mods without UE hooks...\n"));
+            // Test direct Lua state creation
+            fprintf(stderr, "[UE4SS-Linux] Testing direct luaL_newstate...\n");
+            auto* L = luaL_newstate();
+            if (L) {
+                fprintf(stderr, "[UE4SS-Linux] Lua state created OK!\n");
+                luaL_openlibs(L);
+                int err = luaL_dostring(L, "local f = io.open(\"/tmp/ue4ss_lua_works.txt\", \"w\"); if f then f:write(\"IT WORKS!\\n\"); f:close() end");
+                fprintf(stderr, "[UE4SS-Linux] Lua script result: %d\n", err);
+                if (err) fprintf(stderr, "[UE4SS-Linux] Lua error: %s\n", lua_tostring(L, -1));
+                lua_close(L);
+            } else {
+                fprintf(stderr, "[UE4SS-Linux] luaL_newstate FAILED!\n");
+            }
+            Output::send(STR("Linux: Lua mods started. Entering idle loop.\n"));
+            while(true) { std::this_thread::sleep_for(std::chrono::seconds(1)); }
+#else
 
             Output::send(STR("Unreal Engine modules ({}):\n"), SigScannerStaticData::m_is_modular ? STR("modular") : STR("non-modular"));
             auto& main_exe_ptr = SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)].lpBaseOfDll;
@@ -463,6 +495,7 @@ namespace RC
             // As long as you don't do that the thread will stay open and accept further inputs
             m_event_loop.join();
 #endif
+#endif // !PLATFORM_LINUX
         }
         catch (std::runtime_error& e)
         {
@@ -2587,6 +2620,7 @@ namespace RC
             Output::Targets<ObjectDumperOutputDevice> scoped_dumper_out;
             auto& file_device = scoped_dumper_out.get_device<ObjectDumperOutputDevice>();
             file_device.set_file_name_and_path(output_path_and_file_name);
+            fprintf(stderr, "[UE4SS] Log file device configured\n");
             file_device.set_formatter([](File::StringViewType string) -> File::StringType {
                 return File::StringType{string};
             });
