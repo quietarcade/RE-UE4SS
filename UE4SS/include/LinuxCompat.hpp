@@ -52,6 +52,15 @@ inline int freopen_s(FILE** pFile, const char* filename, const char* mode, FILE*
 }
 #endif
 
+// fopen_s replacement
+#ifndef fopen_s
+inline int fopen_s(FILE** pFile, const char* filename, const char* mode)
+{
+    *pFile = fopen(filename, mode);
+    return (*pFile == nullptr) ? -1 : 0;
+}
+#endif
+
 // __debugbreak replacement
 #ifndef __debugbreak
     #define __debugbreak() __builtin_trap()
