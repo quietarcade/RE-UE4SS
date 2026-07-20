@@ -336,10 +336,10 @@ namespace RC
         {
             std::abort();
         };
-        RC_UE4SS_API static auto find_mod_by_name_lua(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*;
-        RC_UE4SS_API static auto find_mod_by_name_cpp(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*;
-        RC_UE4SS_API static auto find_mod_by_name_lua(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*;
-        RC_UE4SS_API static auto find_mod_by_name_cpp(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*;
+        RC_UE4SS_API static auto find_mod_by_name_lua(StringViewType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> LuaMod*;
+        RC_UE4SS_API static auto find_mod_by_name_cpp(StringViewType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> CppMod*;
+        RC_UE4SS_API static auto find_mod_by_name_lua(std::string_view mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> LuaMod*;
+        RC_UE4SS_API static auto find_mod_by_name_cpp(std::string_view mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> CppMod*;
 
         RC_UE4SS_API static auto find_lua_mod_by_name(StringViewType mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         RC_UE4SS_API static auto find_lua_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;

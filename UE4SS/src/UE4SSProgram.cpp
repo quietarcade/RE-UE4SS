@@ -260,10 +260,12 @@ namespace RC
 
             if (settings_manager.Debug.DebugConsoleEnabled)
             {
+#ifndef UE4SS_HEADLESS
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
                 m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
                     return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
                 });
+#endif
 #ifndef UE4SS_HEADLESS
                 if (settings_manager.Debug.DebugConsoleVisible)
                 {
