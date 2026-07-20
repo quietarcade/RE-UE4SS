@@ -147,6 +147,7 @@ namespace RC
         std::thread::id m_event_loop_thread_id{};
 
       private:
+#if PLATFORM_WINDOWS
         std::unique_ptr<PLH::IatHook> m_load_library_a_hook;
         uint64_t m_hook_trampoline_load_library_a;
 
@@ -158,6 +159,7 @@ namespace RC
 
         std::unique_ptr<PLH::IatHook> m_load_library_ex_w_hook;
         uint64_t m_hook_trampoline_load_library_ex_w;
+#endif
 
       public:
         std::vector<std::unique_ptr<Mod>> m_mods;

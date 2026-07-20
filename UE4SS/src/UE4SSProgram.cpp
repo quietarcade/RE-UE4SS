@@ -1841,7 +1841,7 @@ namespace RC
         m_pause_events_processing = false;
 
         // Create a new LuaMod for this mod (same as setup_mods does)
-        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), std::move(mod_path));
+        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), ensure_str(mod_path));
         LuaMod* new_mod_ptr = new_mod.get();
         m_mods.emplace_back(std::move(new_mod));
 
