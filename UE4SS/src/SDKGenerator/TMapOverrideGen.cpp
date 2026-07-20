@@ -3,6 +3,7 @@
 #include <File/File.hpp>
 #include <File/Macros.hpp>
 #include <glaze/glaze.hpp>
+namespace glz { using generic = json_t; }
 #include <SDKGenerator/TMapOverrideGen.hpp>
 #include <Unreal/Common.hpp>
 #include <Unreal/UObjectGlobals.hpp>
