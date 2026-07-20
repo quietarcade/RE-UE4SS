@@ -99,6 +99,15 @@ using TCHAR = wchar_t;
     #define GetCurrentProcess() ((void*)(-1))
 #endif
 
+// MSVC stack allocation
+#include <alloca.h>
+#ifndef _malloca
+    #define _malloca(size) alloca(size)
+#endif
+#ifndef _freea
+    #define _freea(ptr) ((void)0)
+#endif
+
 // DLL export/import macros - on Linux shared libs, use visibility attribute or just empty
 #ifndef RC_DYNOUT_API
     #define RC_DYNOUT_API
