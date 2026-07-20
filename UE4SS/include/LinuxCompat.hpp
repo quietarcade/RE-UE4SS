@@ -62,6 +62,11 @@ inline int freopen_s(FILE** pFile, const char* filename, const char* mode, FILE*
     #define __int64 long long
 #endif
 
+// TCHAR is in RC::Unreal namespace on Linux but Windows makes it global
+// Provide a global typedef for compatibility
+#include <cwchar>
+using TCHAR = wchar_t;
+
 // __declspec replacement - map to GCC visibility attribute
 #ifndef __declspec
     #define __declspec(x)
