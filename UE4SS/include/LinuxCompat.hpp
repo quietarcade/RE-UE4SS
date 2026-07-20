@@ -89,6 +89,11 @@ using TCHAR = wchar_t;
     #define OutputDebugStringW(x) ((void)0)
 #endif
 
+// GetCurrentProcess - returns pseudo-handle on Windows, just use nullptr on Linux
+#ifndef GetCurrentProcess
+    #define GetCurrentProcess() ((void*)(-1))
+#endif
+
 // DLL export/import macros - on Linux shared libs, use visibility attribute or just empty
 #ifndef RC_DYNOUT_API
     #define RC_DYNOUT_API
