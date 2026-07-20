@@ -1154,12 +1154,13 @@ namespace RC
             {
                 continue;
             }
-            for (const auto& [index, name] : std::ranges::enumerate_view(it->names))
+            size_t index = 0; for (const auto& name : it->names)
             {
                 if (!name.Equals(in_name[index]))
                 {
                     found = false;
                 }
+                ++index;
             }
             if (found)
             {
@@ -1200,12 +1201,13 @@ namespace RC
             {
                 continue;
             }
-            for (const auto& [index, name] : std::ranges::enumerate_view(it->names))
+            size_t index = 0; for (const auto& name : it->names)
             {
                 if (name != in_name[index])
                 {
                     found = false;
                 }
+                ++index;
             }
             if (found)
             {
@@ -2295,7 +2297,7 @@ Overloads:
 
             const auto func_ref = hook_lua->registry().make_ref();
 
-            if (class_name.contains(STR(' ')))
+            if (class_name.find(STR(' ')) != StringType::npos)
             {
                 lua.throw_error(fmt::format("Param #1 for NotifyOnNewObject cannot contain spaces; Param value: '{}'", to_utf8_string(class_name)));
             }
