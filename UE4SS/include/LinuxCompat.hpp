@@ -66,6 +66,11 @@ inline int fopen_s(FILE** pFile, const char* filename, const char* mode)
     #define __debugbreak() __builtin_trap()
 #endif
 
+// __forceinline is MSVC-specific
+#ifndef __forceinline
+    #define __forceinline __attribute__((always_inline)) inline
+#endif
+
 // __int64 is MSVC-specific
 #ifndef __int64
     #define __int64 long long
