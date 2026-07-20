@@ -76,6 +76,10 @@ inline int fopen_s(FILE** pFile, const char* filename, const char* mode)
     #define __int64 long long
 #endif
 
+// On Linux with GCC, char8_t is a distinct type that causes conversion issues.
+// Redefine to char for compatibility with ANSICHAR overloads
+#define char8_t char
+
 // TCHAR is in RC::Unreal namespace on Linux but Windows makes it global
 // Provide a global typedef for compatibility
 #include <cwchar>
