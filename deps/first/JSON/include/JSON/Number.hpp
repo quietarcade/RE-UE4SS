@@ -38,6 +38,12 @@ namespace RC::JSON
         explicit Number(int32_t value);
         explicit Number(float value);
         explicit Number(double value);
+#ifdef __linux__
+        // On LP64 Linux, int64_t = long but long long is a distinct type
+        // Provide forwarding constructors to resolve overload ambiguity
+        explicit Number(long long value) : Number(static_cast<int64_t>(value)) {}
+        explicit Number(unsigned long long value) : Number(static_cast<uint64_t>(value)) {}
+#endif
         ~Number() override = default;
 
       private:
