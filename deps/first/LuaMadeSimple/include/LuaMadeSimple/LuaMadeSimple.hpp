@@ -292,13 +292,27 @@ namespace RC::LuaMadeSimple
                 {
                     add_function_value_internal(value);
                 }
-                else if constexpr (std::is_same_v<ValueType, Userdata<typename ValueType::InnerType>>)
+                else if constexpr (std::is_class_v<ValueType>)
                 {
-                    get_lua_instance().transfer_stack_object<typename ValueType::InnerType>(std::move(value.inner_object), std::nullopt, value.table_metamethods);
-                }
-                else if constexpr (std::is_same_v<ValueType, SharedUserdata<typename ValueType::InnerType>>)
-                {
-                    get_lua_instance().share_heap_object(value.inner_object, value.table_metamethods);
+                    if constexpr (requires { typename ValueType::InnerType; })
+                    {
+                        if constexpr (std::is_same_v<ValueType, Userdata<typename ValueType::InnerType>>)
+                        {
+                            get_lua_instance().transfer_stack_object<typename ValueType::InnerType>(std::move(value.inner_object), std::nullopt, value.table_metamethods);
+                        }
+                        else if constexpr (std::is_same_v<ValueType, SharedUserdata<typename ValueType::InnerType>>)
+                        {
+                            get_lua_instance().share_heap_object(value.inner_object, value.table_metamethods);
+                        }
+                        else
+                        {
+                            throw std::runtime_error{"Unsupported type for 'ValueType'"};
+                        }
+                    }
+                    else
+                    {
+                        throw std::runtime_error{"Unsupported type for 'ValueType'"};
+                    }
                 }
                 else
                 {
