@@ -1192,7 +1192,7 @@ namespace RC
                     {
                         return;
                     }
-                    mod_ref = std::make_unique<LuaMod>(*this, StringType{mod_ref->get_name()}, mod_ref->get_path());
+                    mod_ref = std::make_unique<LuaMod>(*this, StringType{mod_ref->get_name()}, ensure_str(mod_ref->get_path()));
                     m_pause_events_processing = false;
                     Output::send(STR("Auto-reloading Lua mod '{}'\n"), mod_ref->get_name());
                     mod_ref->start_mod();
@@ -2026,7 +2026,7 @@ namespace RC
 
         StringType mod_name = ensure_str(mod_name_str);
 
-        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), std::filesystem::path(mod_path));
+        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), ensure_str(std::filesystem::path(mod_path)));
         LuaMod* new_mod_ptr = new_mod.get();
         m_mods.emplace_back(std::move(new_mod));
 
@@ -2255,9 +2255,9 @@ namespace RC
         Output::send(STR("SDK generated in {} seconds.\n"), generator_duration);
     }
 
+#ifndef UE4SS_HEADLESS
     auto UE4SSProgram::stop_render_thread() -> void
     {
-#ifndef UE4SS_HEADLESS
         if (!get_debugging_ui().is_open())
         {
             return;
@@ -2271,8 +2271,8 @@ namespace RC
         {
             get_debugging_ui().request_exit();
         }
-#endif
     }
+#endif
 
 #ifndef UE4SS_HEADLESS
     auto UE4SSProgram::add_gui_tab(std::shared_ptr<GUI::GUITab> tab) -> void
