@@ -10,6 +10,7 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <fstream>
+#include <unistd.h>
 #include <link.h>
 #include <string>
 #include <sys/mman.h>
