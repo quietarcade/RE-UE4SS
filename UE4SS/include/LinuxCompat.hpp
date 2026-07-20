@@ -8,6 +8,7 @@
 #pragma once
 
 #ifdef PLATFORM_LINUX
+#ifdef __cplusplus
 
 #include <cstdio>
 #include <cstring>
@@ -161,4 +162,5 @@ using TCHAR = wchar_t;
     #define RC_ASM_HELPER_API
 #endif
 
+#endif // __cplusplus
 #endif // PLATFORM_LINUX
