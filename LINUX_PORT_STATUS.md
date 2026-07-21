@@ -7,91 +7,53 @@
 ## Goal
 Build `libUE4SS.so` that can be loaded via `LD_PRELOAD` into a native Linux Palworld dedicated server to enable Lua mod support.
 
-## Current Status: COMPILED AND LINKED SUCCESSFULLY
+## Current Status: LUA MODS LOADING AND EXECUTING
 
-`libUE4SS.so` (248MB, ELF 64-bit x86_64 shared object) builds with exit code 0.
+`libUE4SS.so` (15MB stripped) successfully loads into Palworld, initializes, discovers mods, and executes Lua scripts. Both the TestMod and BetterBaseRange mod load and run their initialization code. UE4SS API stubs allow mods to call `NotifyOnNewObject`, `RegisterHook`, etc. without crashing (they just don't have actual UE engine interaction yet).
 
-Output: `/tmp/RE-UE4SS/Binaries/Game__Shipping__Linux/UE4SS/libUE4SS.so`
+### What works end-to-end:
+- .so loads via LD_PRELOAD alongside the game server
+- UE4SS initializes (paths, logging, file I/O, console output)
+- Mods discovered from `Mods/` directory via `mods.txt`
+- Lua states created per mod with standard libraries
+- `require()` resolves modules from mod's scripts directory
+- `main.lua` scripts execute successfully
+- Game server runs concurrently without interference
+- BetterBaseRange mod loads config, registers hooks (stubs), prints loaded message
 
----
-
-## What's Done
-
-### Build System
-- xmake allows `linux` platform with `x86_64` arch
-- Linux platform type with correct defines (`PLATFORM_LINUX`, `PLATFORM_UNIX`, `UE4SS_HEADLESS`)
-- Global defines at root xmake.lua level (ensures all targets see them)
-- UVTD, cppmods, glad, patternsleuth excluded on Linux
-- Rust/MSVC version checks skipped on Linux
-- `LinuxCompat.hpp` force-included globally (printf_s, __declspec, strncpy_s, API macros)
-- GCC flags: `-fpermissive`, `-fms-extensions`, `-fno-char8_t`, `-fPIC`, `-Wno-error`
-- `-fPIC` added globally for all C and C++ targets (required for linking static libs into .so)
-
-### Platform Headers (UEPseudo)
-- `Linux/LinuxPlatform.hpp` - FPlatformTypes (wchar_t TCHAR, 4-byte), PLATFORM_DESKTOP, PLATFORM_64BITS, etc.
-- `Linux/LinuxPlatformCompilerPreSetup.hpp` - __has_warning shim, pragma macros
-- `Linux/LinuxPlatformCompilerSetup.hpp` - FORCEINLINE, DLLEXPORT, RESTRICT
-- `Linux/LinuxPlatformAtomics.hpp` - FLinuxPlatformAtomics with __sync builtins
-- `Linux/LinuxPlatformMemory.hpp` - FLinuxPlatformMemory (memmove/memcpy/memswap)
-- `Linux/LinuxPlatformMath.hpp` - typedef to FGenericPlatformMath
-- `Linux/LinuxPlatformMisc.hpp` - FLinuxPlatformMisc with MemoryBarrier
-- `Linux/LinuxPlatformString.hpp` - typedef to FGenericPlatformString
-- `Linux/LinuxPlatformProperties.hpp` - typedef
-- `Linux/LinuxPlatformFile.h` - empty stub
-- `Windows/MinimalWindowsApi.hpp` - no-op on non-Windows
-- Template ordering fix in ContainerAllocationPolicies.hpp
-- __FUNCDNAME__ -> __PRETTY_FUNCTION__ in VirtualFunctionHelper.hpp
-- DECLARE_VIRTUAL_TYPE_BASE inlined to avoid TypeAccessor redeclaration
-- ScanOverrides/FNameToStringMethod pragma suppress in UnrealInitializer.hpp
-- Common.hpp: FORCEINLINE/FORCENOINLINE guarded with `#ifndef` and `#ifdef __linux__`
-- LinuxPlatform.hpp: FORCEINLINE/FORCENOINLINE guarded with `#ifndef`
-- UAssetRegistry.cpp: Windows includes (`psapi.h`, `WindowsHWrapper.hpp`) guarded with `#ifndef __linux__`
-- ByteSwap.hpp: uses `PLATFORM_TCHAR_IS_4_BYTES` (set to 1 in LinuxPlatform.hpp) for 4-byte TCHAR support
-
-### UE4SS Source Guards
-- `main_ue4ss_linux.cpp` - LD_PRELOAD entry point
-- `CrashDumperLinux.cpp` - signal-based crash handler
-- `CppModLinux.cpp` - dlopen/dlsym mod loader
-- `SinglePassSigScannerLinux.cpp` - /proc/self/maps memory scanner
-- `LinuxDetour.hpp` - mprotect-based inline x64 function hooking (namespace alias PLH = LinuxHook)
-- Platform guards on all Windows-specific sources
-- GUI/GUI.hpp and GUI/Console.hpp guarded with `#ifndef UE4SS_HEADLESS`
-- CppMod.hpp: Windows HMODULE guarded, uses void* on Linux
-
-### Dependency Fixes
-- `luauser.c`: Windows CRITICAL_SECTION replaced with pthread_mutex_t on Linux
-- `JSON/Number.hpp`: Added `long long` / `unsigned long long` constructor overloads for LP64 Linux (where `int64_t = long` but `long long` is distinct)
-- `FMemory.cpp`: `_BitScanForward` replaced with `__builtin_ctz` via `#ifdef _MSC_VER`
-
-### String Type
-- `CharType = wchar_t` on Linux (matches UE's TCHAR, 4 bytes)
-- `fmt` chrono issue fixed by formatting with narrow chars then widening
-- `STR()` macro produces `L""` literals on Linux
+### What doesn't work yet:
+- UE4SS API functions are stubs (NotifyOnNewObject, RegisterHook, FindObject, etc.)
+- No actual UE engine interaction (no sig scanning, no hooking)
+- Mods that depend on UE objects/properties won't function at runtime
 
 ---
 
-## Next Steps: Runtime Testing
+## Architecture
 
-1. **Strip debug symbols** to reduce .so size (248MB -> ~20-30MB expected)
-   ```bash
-   strip --strip-debug /tmp/RE-UE4SS/Binaries/Game__Shipping__Linux/UE4SS/libUE4SS.so
-   ```
+### Loading Flow
+1. `LD_PRELOAD=libUE4SS.so` - .so loaded before main()
+2. `__attribute__((constructor))` fires, starts a 3-second delayed init thread
+3. After delay (ensures static initialization is complete):
+   - `UE4SSProgram` constructor: setup_paths, setup_mods (creates LuaMod objects)
+   - `init()`: skips UE scanning, installs + executes Lua mods in basic mode
+4. Each mod gets: Lua state, open_all_libs, package.path configured, main.lua executed
+5. Init thread enters idle loop (mods are loaded, game runs normally)
 
-2. **Deploy to Palworld server**
-   ```bash
-   cp libUE4SS.so /srv/games/palworld-modded/
-   # Update start.sh to use LD_PRELOAD=./libUE4SS.so
-   ```
-
-3. **Create UE4SS config** - `UE4SS-settings.ini` in the game directory
-
-4. **Test basic loading** - verify UE4SS initializes (check logs for startup messages)
-
-5. **Test Lua mod loading** - create a simple test mod that writes to a file on load
-
-6. **Test BetterBaseRange mod** - the actual target mod for extended base building range
+### Key Design Decisions
+- **3-second delayed init**: Required to avoid static initialization order issues (SIGFPE from uninitialized std::unordered_map in LuaMadeSimple)
+- **Skip UE scanning on Linux**: `ps_scan` returns false, `setup_unreal()` skipped entirely
+- **Basic Lua mode**: Mods execute main.lua directly via `luaL_dofile` instead of through UE4SS's full `prepare_mod`/`start_mod` flow (which requires UE type registration)
+- **Stub API functions**: Key UE4SS globals registered as Lua functions that log/no-op
+- **Skip C++ mods**: `start_cpp_mods()` disabled on Linux (Lua-only focus)
 
 ---
+
+## Build System
+- xmake, platform `linux`, arch `x86_64`, mode `Game__Shipping__Linux`
+- Global flags: `-fpermissive -fno-char8_t -fPIC -Wno-error`
+- Force-include: `LinuxCompat.hpp` (maps MSVC functions to POSIX)
+- Global defines: `PLATFORM_LINUX PLATFORM_UNIX UE4SS_HEADLESS`
+- Excluded on Linux: UVTD, cppmods, glad, patternsleuth
 
 ## Build Command
 ```bash
@@ -99,21 +61,74 @@ source ~/.xmake/profile
 cd /tmp/RE-UE4SS
 xmake f -p linux -a x86_64 -m "Game__Shipping__Linux" -c --ccache=n --yes
 xmake build -j1
+strip --strip-debug Binaries/Game__Shipping__Linux/UE4SS/libUE4SS.so
 ```
 
-Note: `-j1` is recommended. With `-j2` the build may get killed on systems with other running services. The full build takes ~8-10 minutes with `-j1`.
+Full rebuild: ~10 min with `-j1`. Incremental: ~30s.
+
+## Deploy & Test
+```bash
+cp Binaries/Game__Shipping__Linux/UE4SS/libUE4SS.so /srv/games/palworld-modded/
+cd /srv/games/palworld-modded
+LD_PRELOAD=/srv/games/palworld-modded/libUE4SS.so ./Pal/Binaries/Linux/PalServer-Linux-Shipping Pal -log
+```
+
+---
+
+## Files Changed (Key)
+
+### UE4SS Core
+- `UE4SS/src/main_ue4ss_linux.cpp` - LD_PRELOAD entry point, delayed init thread, crash handler
+- `UE4SS/src/UE4SSProgram.cpp` - Linux init path (skip UE scanning, basic Lua mode, stub APIs)
+- `UE4SS/src/Mod/CppModLinux.cpp` - dlopen/dlsym mod loader + all virtual method implementations
+- `UE4SS/include/FilesystemWatcher_Linux.cpp_impl` - no-op filesystem watcher stubs
+
+### Dependencies
+- `deps/first/File/src/FileType/LinuxFile.cpp` - POSIX file operations (fopen/fwrite/fread)
+- `deps/first/LuaRaw/src/luauser.c` - no-op lock functions (pthread not needed for single-threaded)
+- `deps/first/Helpers/src/Casting.cpp` - Linux `check_readable` via pipe trick
+- `deps/first/SinglePassSigScanner/src/SinglePassSigScannerLinux.cpp` - static member defs + stub scanner
+- `deps/first/Unreal/src/UnrealInitializer.cpp` - `ps_scan` stub returning false
+- `deps/first/JSON/include/JSON/Number.hpp` - `long long` overloads for LP64
+- `deps/first/Unreal/include/Unreal/Common.hpp` - `#ifndef` guards for FORCEINLINE/FORCENOINLINE
+
+---
+
+## Next Steps: Implementing UE Interaction
+
+To make mods like BetterBaseRange actually functional (modifying game properties at runtime):
+
+### Option A: Full Sig Scanner Implementation (hard, complete)
+1. Parse `/proc/self/maps` to find game binary's memory regions
+2. Port patternsleuth's pattern matching to scan for UE function signatures
+3. Find: GUObjectArray, FName::ToString, ProcessEvent, ProcessInternal, etc.
+4. Hook ProcessEvent via mprotect-based inline patching (LinuxDetour.hpp exists)
+5. Register real UE4SS Lua API functions (NotifyOnNewObject uses ProcessEvent hook)
+6. Estimated: 8-15 hours of work
+
+### Option B: Hardcoded Offsets (quick, fragile)
+1. Use a tool like `objdump`/`nm`/`readelf` on PalServer-Linux-Shipping to find symbols
+2. Linux UE5 server binaries often have debug symbols or exported names
+3. If GUObjectArray etc. are exported, just read their addresses directly
+4. Estimated: 2-4 hours, breaks on every game update
+
+### Option C: Config File Modification (no hooking needed)
+1. BetterBaseRange's goal is to increase AreaRange on base camps
+2. If this is a config value, might be achievable by modifying game .ini files or DefaultPalWorldSettings
+3. Check if Palworld exposes base camp range as a server config option
+4. Estimated: 30 min if possible, but may not be
+
+### Recommended: Start with Option B
+Linux UE5 dedicated servers typically export many symbols. Check:
+```bash
+nm -D /srv/games/palworld-modded/Pal/Binaries/Linux/PalServer-Linux-Shipping | grep -i "GUObjectArray\|FName\|ProcessEvent"
+```
+If symbols are found, we can skip the sig scanner entirely and use direct addresses.
 
 ---
 
 ## Known Warnings (non-blocking)
-- FORCEINLINE/FORCENOINLINE redefinition warnings between Common.hpp and LinuxPlatform.hpp (harmless, same value on both sides when `__linux__` is defined)
+- FORCEINLINE/FORCENOINLINE redefinition between Common.hpp and LinuxPlatform.hpp
 - `friend declaration ... declares a non-template function` in HandleTemplate.hpp
 - Deprecated enum-enum-conversion in UnrealType.hpp
-- `-Wno-gnu-line-marker` unrecognized (GCC doesn't support it, only Clang)
-
-## Architecture Notes
-- The .so is loaded via `LD_PRELOAD` - constructor function runs `UE4SSProgram::setup()`
-- Module scanning uses `/proc/self/maps` to find UE binary segments
-- Function hooking uses mprotect-based inline x64 patching (LinuxDetour.hpp)
-- Lua mods loaded from `Mods/` directory relative to the game binary
-- No GUI - all output goes to stdout/log files (headless mode)
+- UE4SS loads into subprocess too (crashpad_handler) - harmless, just extra log lines
