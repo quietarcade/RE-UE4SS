@@ -466,6 +466,31 @@ namespace RC
                             + scripts_dir_lc + "/?.lua'";
                         luaL_dostring(lua.get_lua_state(), cmd.c_str());
                     }
+                    // Register stub UE4SS Lua API functions (basic mode - no UE hooks)
+                    luaL_dostring(lua.get_lua_state(),
+                        "function NotifyOnNewObject(class_path, callback)\n"
+                        "  print(string.format(\"[UE4SS-Linux] NotifyOnNewObject stub: %s (callback registered but UE hooks not available)\", class_path))\n"
+                        "end\n"
+                        "function ExecuteWithDelay(delay_ms, callback)\n"
+                        "  -- Execute immediately since we have no async scheduler\n"
+                        "  callback()\n"
+                        "end\n"
+                        "function ExecuteInGameThread(callback)\n"
+                        "  callback()\n"
+                        "end\n"
+                        "function RegisterHook(path, callback)\n"
+                        "  print(string.format(\"[UE4SS-Linux] RegisterHook stub: %s (not available)\", path))\n"
+                        "end\n"
+                        "function FindObject(class, short, instance)\n"
+                        "  return nil\n"
+                        "end\n"
+                        "function FindFirstOf(class_name)\n"
+                        "  return nil\n"
+                        "end\n"
+                        "function StaticFindObject(path)\n"
+                        "  return nil\n"
+                        "end\n"
+                    );
                     auto scripts_path = lua_mod->get_path() / STR("scripts") / STR("main.lua");
                     if (!std::filesystem::exists(scripts_path))
                         scripts_path = lua_mod->get_path() / STR("Scripts") / STR("main.lua");
