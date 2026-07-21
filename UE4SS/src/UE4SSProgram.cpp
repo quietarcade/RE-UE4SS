@@ -447,21 +447,35 @@ namespace RC
         {
 #ifdef PLATFORM_LINUX
             Output::send(STR("Linux: Skipping Unreal Engine scanning\n"));
-            Output::send(STR("Linux: Starting Lua mods without UE hooks...\n"));
-            // Test direct Lua state creation
-            fprintf(stderr, "[UE4SS-Linux] Testing direct luaL_newstate...\n");
-            auto* L = luaL_newstate();
-            if (L) {
-                fprintf(stderr, "[UE4SS-Linux] Lua state created OK!\n");
-                luaL_openlibs(L);
-                int err = luaL_dostring(L, "local f = io.open(\"/tmp/ue4ss_lua_works.txt\", \"w\"); if f then f:write(\"IT WORKS!\\n\"); f:close() end");
-                fprintf(stderr, "[UE4SS-Linux] Lua script result: %d\n", err);
-                if (err) fprintf(stderr, "[UE4SS-Linux] Lua error: %s\n", lua_tostring(L, -1));
-                lua_close(L);
-            } else {
-                fprintf(stderr, "[UE4SS-Linux] luaL_newstate FAILED!\n");
+            Output::send(STR("Linux: Installing and starting Lua mods (basic mode)...\n"));
+            install_lua_mods();
+            // Start mods in basic mode - just run main.lua without UE bindings
+            for (auto& mod : m_mods) {
+                auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+                if (!lua_mod || !lua_mod->is_installable() || lua_mod->is_started()) continue;
+                Output::send(STR("Starting Lua mod: {}\n"), lua_mod->get_name().data());
+                try {
+                    auto& lua = lua_mod->lua();
+                    lua.open_all_libs();
+                    auto scripts_path = lua_mod->get_path() / STR("scripts") / STR("main.lua");
+                    if (!std::filesystem::exists(scripts_path))
+                        scripts_path = lua_mod->get_path() / STR("Scripts") / STR("main.lua");
+                    if (std::filesystem::exists(scripts_path)) {
+                        auto path_str = scripts_path.string();
+                        int err = luaL_dofile(lua.get_lua_state(), path_str.c_str());
+                        if (err) {
+                            Output::send<LogLevel::Error>(STR("Lua error in {}: {}\n"), lua_mod->get_name().data(), ensure_str(lua_tostring(lua.get_lua_state(), -1)));
+                        } else {
+                            Output::send(STR("Lua mod {} executed successfully\n"), lua_mod->get_name().data());
+                        }
+                    } else {
+                        Output::send<LogLevel::Warning>(STR("No main.lua found for mod {}\n"), lua_mod->get_name().data());
+                    }
+                } catch (const std::exception& e) {
+                    Output::send<LogLevel::Error>(STR("Exception starting mod {}: {}\n"), lua_mod->get_name().data(), ensure_str(e.what()));
+                }
             }
-            Output::send(STR("Linux: Lua mods started. Entering idle loop.\n"));
+            Output::send(STR("Linux: All mods processed. Entering idle loop.\n"));
             while(true) { std::this_thread::sleep_for(std::chrono::seconds(1)); }
 #else
 
