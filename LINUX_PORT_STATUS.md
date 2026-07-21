@@ -98,32 +98,65 @@ LD_PRELOAD=/srv/games/palworld-modded/libUE4SS.so ./Pal/Binaries/Linux/PalServer
 
 To make mods like BetterBaseRange actually functional (modifying game properties at runtime):
 
-### Option A: Full Sig Scanner Implementation (hard, complete)
-1. Parse `/proc/self/maps` to find game binary's memory regions
-2. Port patternsleuth's pattern matching to scan for UE function signatures
-3. Find: GUObjectArray, FName::ToString, ProcessEvent, ProcessInternal, etc.
-4. Hook ProcessEvent via mprotect-based inline patching (LinuxDetour.hpp exists)
-5. Register real UE4SS Lua API functions (NotifyOnNewObject uses ProcessEvent hook)
-6. Estimated: 8-15 hours of work
+### Vtable Discovery (completed this session)
 
-### Option B: Hardcoded Offsets (quick, fragile)
-1. Use a tool like `objdump`/`nm`/`readelf` on PalServer-Linux-Shipping to find symbols
-2. Linux UE5 server binaries often have debug symbols or exported names
-3. If GUObjectArray etc. are exported, just read their addresses directly
-4. Estimated: 2-4 hours, breaks on every game update
+We found that PalServer-Linux-Shipping has **dynamic symbol exports** for UE vtables despite being stripped. Key findings:
+
+```
+_ZTV7UObject  at vaddr 0x1a5c980  (712 bytes, 87 vfuncs)
+_ZTV11UObjectBase at vaddr 0x1a5c948
+_ZTV6UWorld   at vaddr 0x22507f0
+_ZTV6UClass   (also exported)
+_ZTV11UGameEngine at vaddr 0x20e6558
+```
+
+**UObject vtable analysis** (vptr = vtable + 16 = `0x1a5c990`):
+- Top candidates for `ProcessEvent`: **vfunc[62] at `0x7aedbb0`** (13696 bytes, prologue `push rbp; push r15; push r14` - complex dispatch function)
+- Trivial stubs (just `ret`): vfunc[63], vfunc[64]
+- Virtual dispatch thunks: vfunc[67] (`mov rax,[rdi]; jmp [rax+0x210]`)
+- The 0x440ce** range functions are small shims (likely default base class overrides)
+
+**Binary characteristics:**
+- Type: EXEC (not PIE), so addresses are absolute
+- Stripped (no debug symbols via `nm`)
+- Has RTTI strings (`_ZTV7UObject`, `_ZTI7UObject` in `.dynstr`)
+- `.text` section: `0x43b3000` to `0xbc8d330` (120MB)
+- `.data.rel.ro`: contains vtable data at `0xbc8e330`
+- 58786 dynamic symbols (mostly ICU, OpenSSL, libstdc++)
+- No UE game functions exported (all static-linked)
+- `GUObjectArray`, `ProcessEvent`, `FName::ToString` NOT in dynsym
+
+**What this means for the implementation:**
+- Option B (hardcoded offsets from exports) is PARTIALLY viable - we have vtable addresses
+- We can hook `ProcessEvent` by patching the vtable entry (no inline hook needed!)
+- vtable hooking: `mprotect` the vtable page, replace vfunc[62] with our trampoline
+- Still need to find `GUObjectArray` and `FName::ToString` for full UE4SS support
+- Pattern scanning still needed for non-vtable globals
+
+### Implementation Plan (revised)
+
+**Phase 1: Vtable-based ProcessEvent hook** (2-3 hours)
+1. At runtime, resolve `_ZTV7UObject` via `dlsym` on the main executable handle
+2. Calculate vfunc[62] address (vtable + 16 + 62*8)
+3. `mprotect` the vtable page to RW
+4. Replace the function pointer with our hook function
+5. Our hook: check if the called UFunction matches registered callbacks, then call original
+6. This gives us `RegisterHook` and `NotifyOnNewObject` (via hooking PostInitProperties)
+
+**Phase 2: GUObjectArray discovery** (2-3 hours)
+1. Scan `.text` for patterns that reference GUObjectArray (e.g., `FUObjectArray::AllocateUObjectIndex`)
+2. Or: at runtime, find any UObject instance (from ProcessEvent hook), read its index, trace back to the array
+3. Once found, enables `FindObject`, `FindFirstOf`, `StaticFindObject`
+
+**Phase 3: Property access** (3-4 hours)
+1. With GUObjectArray + ProcessEvent, can iterate objects and read UProperty metadata
+2. Implement Lua object wrappers that allow `base_model.AreaRange = value`
+3. This makes BetterBaseRange fully functional
 
 ### Option C: Config File Modification (no hooking needed)
-1. BetterBaseRange's goal is to increase AreaRange on base camps
-2. If this is a config value, might be achievable by modifying game .ini files or DefaultPalWorldSettings
-3. Check if Palworld exposes base camp range as a server config option
-4. Estimated: 30 min if possible, but may not be
-
-### Recommended: Start with Option B
-Linux UE5 dedicated servers typically export many symbols. Check:
-```bash
-nm -D /srv/games/palworld-modded/Pal/Binaries/Linux/PalServer-Linux-Shipping | grep -i "GUObjectArray\|FName\|ProcessEvent"
-```
-If symbols are found, we can skip the sig scanner entirely and use direct addresses.
+- `bBuildAreaLimit=False` is already set (build area unlimited)
+- But `AreaRange` (Pal work range) is NOT a server config option - requires UE property modification
+- Option C is not viable for this specific mod
 
 ---
 
