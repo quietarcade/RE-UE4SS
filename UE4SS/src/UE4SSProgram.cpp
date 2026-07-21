@@ -457,6 +457,15 @@ namespace RC
                 try {
                     auto& lua = lua_mod->lua();
                     lua.open_all_libs();
+                    // Set package.path to include mod scripts directory
+                    {
+                        auto scripts_dir = (lua_mod->get_path() / STR("Scripts")).string();
+                        auto scripts_dir_lc = (lua_mod->get_path() / STR("scripts")).string();
+                        std::string cmd = "package.path = package.path .. ';"
+                            + scripts_dir + "/?.lua;"
+                            + scripts_dir_lc + "/?.lua'";
+                        luaL_dostring(lua.get_lua_state(), cmd.c_str());
+                    }
                     auto scripts_path = lua_mod->get_path() / STR("scripts") / STR("main.lua");
                     if (!std::filesystem::exists(scripts_path))
                         scripts_path = lua_mod->get_path() / STR("Scripts") / STR("main.lua");
